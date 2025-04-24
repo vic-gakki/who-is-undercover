@@ -48,6 +48,22 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } else {
       client.emit('error', { message: 'Room not found' });
     }
+  
+  }
+
+  @SubscribeMessage('leave-room')
+  handleLeaveRoom(client: Socket, payload: { roomCode: string; playerId: string }) {
+    const room = this.gameService.leaveRoom(payload.roomCode, payload.playerId);
+    
+    if (room) {
+      client.leave(payload.roomCode);
+      this.server.to(payload.roomCode).emit('player-left', {
+        playerId: payload.playerId,
+        players: room.players
+      });
+    } else {
+      client.emit('error', { message: 'Room not found' });
+    }
   }
 
   @SubscribeMessage('rejoin-room')

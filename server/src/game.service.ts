@@ -67,7 +67,7 @@ export class GameService {
     return room;
   }
 
-  leaveRoom(roomCode: string, playerId: string): void {
+  leaveRoom(roomCode: string, playerId: string): GameRoom | null {
     const room = this.rooms.get(roomCode);
     if (!room) return;
     
@@ -78,6 +78,7 @@ export class GameService {
     } else if (room.players.length > 0 && room.players[0].isHost === false) {
       room.players[0].isHost = true;
     }
+    return room
   }
 
   getRoom(roomCode: string): GameRoom | null {
