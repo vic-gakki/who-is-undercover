@@ -14,7 +14,7 @@ export type Player = {
 }
 
 export type GamePhase = 'waiting' | 'description' | 'voting' | 'results'
-
+export type DescriptionType = Array<Array<Record<string, string>>>
 interface GameSession {
   playerId: string
   playerName: string
@@ -29,13 +29,14 @@ export const useGameStore = defineStore('game', () => {
   const currentPlayer = ref<Player | null>(null)
   const gamePhase = ref<GamePhase>('waiting')
   const currentTurn = ref<number>(0)
-  const descriptions = ref<Record<string, string>>({})
+  const descriptions = ref<DescriptionType>([])
   const votes = ref<Record<string, string>>({})
   const eliminations = ref<string[]>([])
   const winner = ref<'civilians' | 'undercover' | null>(null)
   const word = ref<string>('')
   const error = ref<string | null>(null)
   const isInitialized = ref(false)
+  const round = ref<number | null>(0)
 
   // Getters
   const isHost = computed(() => currentPlayer.value?.isHost || false)
@@ -223,11 +224,12 @@ export const useGameStore = defineStore('game', () => {
     currentPlayer.value = null
     gamePhase.value = 'waiting'
     currentTurn.value = 0
-    descriptions.value = {}
+    descriptions.value = []
     votes.value = {}
     eliminations.value = []
     winner.value = null
     word.value = ''
+    round.value = null
   }
 
   // Helper functions
@@ -264,15 +266,19 @@ export const useGameStore = defineStore('game', () => {
 
     socket.on('description-submitted', (data: { 
       playerId: string, 
-      description: string, 
-      nextTurn: number 
+      descriptions: DescriptionType,
+      nextTurn: number,
+      round: number
     }) => {
-      descriptions.value[data.playerId] = data.description
+      descriptions.value = data.descriptions
       currentTurn.value = data.nextTurn
-      
-      if (data.nextTurn >= players.value.length) {
-        gamePhase.value = 'voting'
-      }
+      round.value = data.round
+    })
+
+    socket.on('phase-changed', (data: { 
+      phase: GamePhase, 
+    }) => {
+      gamePhase.value = data.phase
     })
 
     socket.on('vote-cast', (data: { 
@@ -306,7 +312,7 @@ export const useGameStore = defineStore('game', () => {
     socket.on('game-reset', () => {
       gamePhase.value = 'waiting'
       currentTurn.value = 0
-      descriptions.value = {}
+      descriptions.value = []
       votes.value = {}
       eliminations.value = []
       winner.value = null

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../stores/gameStore'
-import PlayerCard from '../components/PlayerCard.vue'
 import DescriptionPhase from '../components/DescriptionPhase.vue'
 import VotingPhase from '../components/VotingPhase.vue'
 
@@ -115,16 +114,12 @@ const cancelLeave = () => {
         
         <!-- Description Phase -->
         <DescriptionPhase
-          v-if="gameStore.gamePhase === 'description'"
-          :current-turn-player="gameStore.currentTurnPlayer"
-          :is-current-turn="gameStore.isCurrentTurn"
-          :descriptions="gameStore.descriptions"
           @submit-description="gameStore.submitDescription"
         />
         
         <!-- Voting Phase -->
         <VotingPhase
-          v-else-if="gameStore.gamePhase === 'voting'"
+          v-if="gameStore.gamePhase === 'voting'"
           :active-players="gameStore.activePlayers"
           :current-player="gameStore.currentPlayer"
           :can-vote="gameStore.canVote"

@@ -32,7 +32,6 @@ const createRoom = async () => {
   }
 
   // Check if socket is connected
-  debugger
   if (!gameStore.socketConnected) {
     error.value = gameStore.socketError || 'Unable to connect to game server. Please try again later.'
     return

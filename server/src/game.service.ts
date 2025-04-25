@@ -16,10 +16,12 @@ interface GameRoom {
   players: Player[];
   phase: 'waiting' | 'description' | 'voting' | 'results';
   currentTurn: number;
-  descriptions: Record<string, string>;
+  descriptions: Array<Array<Record<string, string>>>;
   votes: Record<string, string>;
   civilianWord?: string;
   undercoverWord?: string;
+  mode?: 'offline' | 'online';
+  round: number
 }
 
 @Injectable()
@@ -32,8 +34,9 @@ export class GameService {
       players: [player],
       phase: 'waiting',
       currentTurn: 0,
-      descriptions: {},
+      descriptions: [],
       votes: {},
+      round: 0,
     };
     
     this.rooms.set(roomCode, room);
@@ -104,7 +107,7 @@ export class GameService {
     
     room.phase = 'description';
     room.currentTurn = 0;
-    room.descriptions = {};
+    room.descriptions = [];
     room.votes = {};
     
     return room;
@@ -120,5 +123,28 @@ export class GameService {
     ];
     
     return wordPairs[Math.floor(Math.random() * wordPairs.length)];
+  }
+
+  submitDescription(roomCode: string, playerId: string, description: string): GameRoom | null {
+    const room = this.rooms.get(roomCode);
+    if (!room) return null;
+    if(!room.descriptions[room.round]){
+      room.descriptions[room.round] = []
+    }
+    const name = room.players.find(player => player.id === playerId)?.name;
+    room.descriptions[room.round].push({ playerId, description, name });
+    // Move to next player's turn
+    room.currentTurn = (room.currentTurn + 1) % this.getActivePlayers(roomCode).length;
+    if(room.currentTurn === 0){
+      room.round++
+    }
+    return room;
+  }
+
+  getActivePlayers(roomCode: string): Player[] | null {
+    const room = this.rooms.get(roomCode);
+    if (!room) return [];
+    
+    return room.players.filter(player => !player.isEliminated);
   }
 }

@@ -113,6 +113,33 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           word: player.word,
         });
       });
+      room.phase = 'description';
+      this.server.to(payload.roomCode).emit('phase-changed', { phase: 'description' });
+    }
+  }
+
+  @SubscribeMessage('submit-description')
+  handleSubmitDescription(client: Socket, payload: { roomCode: string; playerId: string; description: string }) {
+    const room = this.gameService.submitDescription(
+      payload.roomCode,
+      payload.playerId,
+      payload.description
+    );
+    
+    if (room) {
+      // Broadcast the new description to all players
+      this.server.to(payload.roomCode).emit('description-submitted', {
+        playerId: payload.playerId,
+        nextTurn: room.currentTurn,
+        descriptions: room.descriptions,
+        round: room.round
+      });
+
+      // Move to next turn or voting phase if all descriptions are in
+      if (!room.descriptions[room.round]) {
+        room.phase = 'voting';
+        this.server.to(payload.roomCode).emit('phase-changed', { phase: 'voting' });
+      }
     }
   }
 }

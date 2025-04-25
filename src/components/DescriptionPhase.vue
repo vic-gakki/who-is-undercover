@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { Player } from '../stores/gameStore'
+import { useGameStore } from '../stores/gameStore';
+import { storeToRefs } from 'pinia';
 
-const props = defineProps<{
-  currentTurnPlayer: Player | null
-  isCurrentTurn: boolean
-  descriptions: Record<string, string>
-}>()
+const {
+  descriptions,
+  currentPlayer,
+  currentTurnPlayer,
+  isCurrentTurn
+} = storeToRefs(useGameStore())
 
 const emit = defineEmits<{
   (e: 'submitDescription', description: string): void
@@ -15,19 +17,12 @@ const emit = defineEmits<{
 const description = ref('')
 const isLoading = ref(false)
 
-const descriptionsList = computed(() => {
-  return Object.entries(props.descriptions).map(([playerId, text]) => {
-    const player = playerId // In a real app, you'd map this to player name
-    return { player, text }
-  })
-})
-
 const isInputValid = computed(() => {
   return description.value.trim().length >= 3
 })
 
 const submitDescription = () => {
-  if (!isInputValid.value || !props.isCurrentTurn) return
+  if (!isInputValid.value || !isCurrentTurn.value) return
   
   isLoading.value = true
   emit('submitDescription', description.value.trim())
@@ -97,27 +92,30 @@ const submitDescription = () => {
     </div>
     
     <!-- Previous Descriptions -->
-    <div class="mt-8" v-if="Object.keys(descriptions).length > 0">
+    <div class="mt-8" v-if="descriptions.length > 0">
       <h3 class="text-lg font-semibold mb-4">Previous Descriptions</h3>
       
       <div class="space-y-4">
-        <div 
-          v-for="(playerId, index) in Object.keys(descriptions)" 
-          :key="playerId"
-          class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 animate-fade-in"
-        >
-          <div class="flex items-start">
-            <div class="w-8 h-8 rounded-full bg-secondary-500 flex items-center justify-center text-white font-medium text-sm mr-3 flex-shrink-0">
-              {{ index + 1 }}
-            </div>
-            
-            <div>
-              <div class="font-medium mb-1">
-                {{ playerId === currentTurnPlayer?.id ? 'You' : currentTurnPlayer?.name }}
+        <div v-for="(round, rindex) of descriptions">
+          <p>Round {{ rindex + 1 }}</p>
+          <div 
+            v-for="({playerId, description, name}, index) in round" 
+            :key="playerId"
+            class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 animate-fade-in"
+          >
+            <div class="flex items-start">
+              <div class="w-8 h-8 rounded-full bg-secondary-500 flex items-center justify-center text-white font-medium text-sm mr-3 flex-shrink-0">
+                {{ index + 1 }}
               </div>
-              <p class="text-gray-700 dark:text-gray-300">
-                "{{ descriptions[playerId] }}"
-              </p>
+              
+              <div>
+                <div class="font-medium mb-1">
+                  {{ playerId === currentPlayer?.id ? 'You' : name }}
+                </div>
+                <p class="text-gray-700 dark:text-gray-300">
+                  "{{ description }}"
+                </p>
+              </div>
             </div>
           </div>
         </div>
