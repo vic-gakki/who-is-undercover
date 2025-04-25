@@ -7,6 +7,9 @@ const router = useRouter()
 const gameStore = useGameStore()
 
 const playerName = ref('')
+const roomPassword = ref('')
+const showPassword = ref(false)
+const isOnline = ref(false) // true = online, false = offline
 const roomCode = ref('')
 const showCreateRoom = ref(false)
 const showJoinRoom = ref(false)
@@ -16,12 +19,17 @@ const error = ref('')
 const toggleCreateRoom = () => {
   showCreateRoom.value = !showCreateRoom.value
   showJoinRoom.value = false
+  roomPassword.value = ''
+  showPassword.value = false
   error.value = ''
+
 }
 
 const toggleJoinRoom = () => {
   showJoinRoom.value = !showJoinRoom.value
   showCreateRoom.value = false
+  roomPassword.value = ''
+  showPassword.value = false
   error.value = ''
 }
 
@@ -40,7 +48,7 @@ const createRoom = async () => {
   isLoading.value = true
   
   try {
-    const newRoomCode = gameStore.createRoom(playerName.value.trim())
+    const newRoomCode = gameStore.createRoom(playerName.value.trim(), roomPassword.value.trim(), isOnline.value)
     router.push({ name: 'lobby', params: { roomCode: newRoomCode } })
   } catch (err) {
     error.value = 'Failed to create room. Please try again.'
@@ -70,8 +78,7 @@ const joinRoom = async () => {
   isLoading.value = true
   
   try {
-    gameStore.joinRoom(roomCode.value.trim().toUpperCase(), playerName.value.trim())
-    router.push({ name: 'lobby', params: { roomCode: roomCode.value.trim().toUpperCase() } })
+    gameStore.joinRoom(roomCode.value.trim().toUpperCase(), playerName.value.trim(), roomPassword.value.trim())
   } catch (err) {
     error.value = 'Failed to join room. Please check the room code and try again.'
     console.error(err)
@@ -135,8 +142,58 @@ const joinRoom = async () => {
                 class="input"
                 placeholder="Enter your name"
                 :disabled="isLoading"
-                @keyup.enter="createRoom"
               />
+            </div>
+            <div>
+              <label for="roomPassword" class="block text-sm font-medium mb-1">Room Password</label>
+              <div class="relative">
+                <input
+                  v-model="roomPassword"
+                  :type="showPassword ? 'text' : 'password'"
+                  id="roomPassword"
+                  class="input !pr-10"
+                  placeholder="Enter Room Password (optional)"
+                  :disabled="isLoading"
+                  @keyup.enter="createRoom"
+                />
+                <button
+                  type="button"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  @click="showPassword = !showPassword"
+                >
+                  <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                    <path d="M3 3l14 14" stroke="currentColor" stroke-width="2" />
+                  </svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="flex items-center">
+              <label class="block text-sm font-medium mr-2">Mode</label>
+              <div class="flex items-center">
+                <div class="relative inline-block w-12 mr-2 align-middle select-none">
+                  <input
+                    v-model="isOnline"
+                    type="checkbox"
+                    name="mode"
+                    id="mode"
+                    class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-all duration-200 ease-in-out"
+                    :class="!isOnline ? 'left-0' : 'left-full -translate-x-full'"
+                  />
+                  <label
+                    for="mode"
+                    class="toggle-label block overflow-hidden h-6 rounded-full cursor-pointer transition-colors duration-200"
+                    :class="isOnline ? 'bg-green-400' : 'bg-gray-400'"
+                  ></label>
+                </div>
+                <span class="text-sm font-medium ml-2" :class="isOnline ? 'text-green-400' : 'text-gray-600'">
+                  {{ isOnline ? 'Online' : 'Offline' }}
+                </span>
+              </div>
             </div>
             
             <button 
@@ -177,6 +234,34 @@ const joinRoom = async () => {
                 :disabled="isLoading"
                 @keyup.enter="joinRoom"
               />
+            </div>
+
+            <div>
+              <label for="joinRoomPassword" class="block text-sm font-medium mb-1">Room Password</label>
+              <div class="relative">
+                <input
+                  v-model="roomPassword"
+                  :type="showPassword ? 'text' : 'password'"
+                  id="joinRoomPassword"
+                  class="input !pr-10"
+                  placeholder="Enter Room Password (optional)"
+                  :disabled="isLoading"
+                />
+                <button
+                  type="button"
+                  class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  @click="showPassword = !showPassword"
+                >
+                  <svg v-if="showPassword" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                    <path d="M3 3l14 14" stroke="currentColor" stroke-width="2" />
+                  </svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd" />
+                  </svg>
+                </button>
+              </div>
             </div>
             
             <button 

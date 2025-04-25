@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Socket } from 'socket.io';
 
-interface Player {
+export interface RoomSetting {
+  mode: 'online' | 'offline';
+  password?: string;
+}
+export interface Player {
   id: string;
   name: string;
   isHost: boolean;
@@ -9,44 +13,41 @@ interface Player {
   isUndercover?: boolean;
   word?: string;
   isEliminated?: boolean;
+  inTurn?: boolean;
+  descriptions?: string[];
+  votes?: string[];
 }
 
-interface GameRoom {
+export interface GameRoom extends RoomSetting {
   code: string;
   players: Player[];
   phase: 'waiting' | 'description' | 'voting' | 'results';
-  currentTurn: number;
-  descriptions: Array<Array<Record<string, string>>>;
-  votes: Record<string, string>;
   civilianWord?: string;
   undercoverWord?: string;
-  mode?: 'offline' | 'online';
-  round: number
+  round: number;
 }
 
 @Injectable()
 export class GameService {
   private rooms: Map<string, GameRoom> = new Map();
 
-  createRoom(roomCode: string, player: Player): GameRoom {
+  createRoom(roomCode: string, player: Player, settings: RoomSetting): GameRoom {
     const room: GameRoom = {
       code: roomCode,
       players: [player],
       phase: 'waiting',
-      currentTurn: 0,
-      descriptions: [],
-      votes: {},
       round: 0,
+      ...settings
     };
     
-    this.rooms.set(roomCode, room);
+    this.rooms.set(roomCode, room); 
     return room;
   }
 
-  joinRoom(roomCode: string, player: Player): GameRoom | null {
+  joinRoom(roomCode: string, player: Player, password: string): GameRoom | null | Error {
     const room = this.rooms.get(roomCode);
     if (!room) return null;
-    
+    if (room.password && room.password !== password) return new Error('Invalid password');
     room.players.push(player);
     return room;
   }
@@ -106,9 +107,6 @@ export class GameService {
     }));
     
     room.phase = 'description';
-    room.currentTurn = 0;
-    room.descriptions = [];
-    room.votes = {};
     
     return room;
   }
@@ -128,16 +126,14 @@ export class GameService {
   submitDescription(roomCode: string, playerId: string, description: string): GameRoom | null {
     const room = this.rooms.get(roomCode);
     if (!room) return null;
-    if(!room.descriptions[room.round]){
-      room.descriptions[room.round] = []
-    }
+    
     const name = room.players.find(player => player.id === playerId)?.name;
-    room.descriptions[room.round].push({ playerId, description, name });
-    // Move to next player's turn
-    room.currentTurn = (room.currentTurn + 1) % this.getActivePlayers(roomCode).length;
-    if(room.currentTurn === 0){
-      room.round++
-    }
+    // room.descriptions[room.round].push({ playerId, description, name });
+    // // Move to next player's turn
+    // room.currentTurn = (room.currentTurn + 1) % this.getActivePlayers(roomCode).length;
+    // if(room.currentTurn === 0){
+    //   room.round++
+    // }
     return room;
   }
 
@@ -146,5 +142,38 @@ export class GameService {
     if (!room) return [];
     
     return room.players.filter(player => !player.isEliminated);
+  }
+
+  castVote(roomCode: string, voterId: string, targetId: string): GameRoom | null {
+    const room = this.rooms.get(roomCode);
+    if (!room) return null;
+    // if(!room.votes[room.round]){
+    //   room.votes[room.round] = []
+    // }
+    // room.votes[room.round].push({ voterId, targetId });
+    
+    // // Check if all players have voted
+    // if (Object.keys(room.votes).length === room.players.length) {
+    //   const voteCounts = Object.values(room.votes).reduce((acc, vote) => {
+    //     acc[vote] = (acc[vote] || 0) + 1;
+    //     return acc;
+    //   }, {} as Record<string, number>);
+      
+    //   const maxVotes = Math.max(...Object.values(voteCounts));
+    //   const targets = Object.keys(voteCounts).filter(playerId => voteCounts[playerId] === maxVotes);
+      
+    //   if (targets.length > 0) {
+    //     const targetId = targets[0];
+    //     const targetPlayer = room.players.find(player => player.id === targetId);
+        
+    //     if (targetPlayer) {
+    //       targetPlayer.isEliminated = true;
+    //       room.phase = 'results';
+    //       room.votes = {}; // Reset votes for the next round
+    //     }
+    //   }
+    // }
+    
+    return room;
   }
 }

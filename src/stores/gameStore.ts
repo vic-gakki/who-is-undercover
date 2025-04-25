@@ -3,6 +3,8 @@ import { ref, computed, watch } from 'vue'
 import { v4 as uuidv4 } from 'uuid'
 import { socket, isConnected, connectionError } from '../services/socketService'
 import socketService from '../services/socketService'
+import { useRouter } from 'vue-router'
+const ERROR_TIMEOUT = 1500
 
 export type Player = {
   id: string
@@ -14,7 +16,7 @@ export type Player = {
 }
 
 export type GamePhase = 'waiting' | 'description' | 'voting' | 'results'
-export type DescriptionType = Array<Array<Record<string, string>>>
+export type ResultType = Array<Array<Record<string, string>>>
 interface GameSession {
   playerId: string
   playerName: string
@@ -23,13 +25,14 @@ interface GameSession {
 }
 
 export const useGameStore = defineStore('game', () => {
+  const router = useRouter()
   // State
   const roomCode = ref<string>('')
   const players = ref<Player[]>([])
   const currentPlayer = ref<Player | null>(null)
   const gamePhase = ref<GamePhase>('waiting')
   const currentTurn = ref<number>(0)
-  const descriptions = ref<DescriptionType>([])
+  const descriptions = ref<ResultType>([])
   const votes = ref<Record<string, string>>({})
   const eliminations = ref<string[]>([])
   const winner = ref<'civilians' | 'undercover' | null>(null)
@@ -96,6 +99,13 @@ export const useGameStore = defineStore('game', () => {
     localStorage.removeItem('gameSession')
   }
 
+  function showError (message: string) {
+    error.value = message
+    setTimeout(() => {
+      error.value = null
+    }, ERROR_TIMEOUT)
+  }
+
   // Watch for changes that should trigger session save
   watch([currentPlayer, roomCode], () => {
     if (currentPlayer.value && roomCode.value) {
@@ -124,12 +134,18 @@ export const useGameStore = defineStore('game', () => {
         socket.emit('rejoin-room', {
           roomCode: session.roomCode,
           player: currentPlayer.value
+        }, (room:any) => {
+          if(room.errorCode){
+            showError(room.error)
+            router.replace('/')
+            clearSession()
+          }
         })
       }
     }
   }
 
-  function createRoom(playerName: string) {
+  function createRoom(playerName: string, password: string, isOnline: boolean) {
     if (!socketConnected.value) {
       socketService.connect()
     }
@@ -147,30 +163,41 @@ export const useGameStore = defineStore('game', () => {
     
     socket.emit('create-room', {
       roomCode: newRoomCode,
+      settings: {
+        password,
+        mode: isOnline ? 'online' : 'offline'
+      },
       player: currentPlayer.value
     })
     
     return newRoomCode
   }
 
-  function joinRoom(newRoomCode: string, playerName: string) {
+  function joinRoom(newRoomCode: string, playerName: string, password: string) {
     if (!socketConnected.value) {
       socketService.connect()
     }
     
     const playerId = uuidv4()
     
-    currentPlayer.value = {
+    const player = {
       id: playerId,
       name: playerName,
       isHost: false
     }
     
-    roomCode.value = newRoomCode
-    
     socket.emit('join-room', {
       roomCode: newRoomCode,
-      player: currentPlayer.value
+      player,
+      password
+    }, (res: Record<string ,string>) => {
+      if(res?.error){
+        showError(res.error)
+        return
+      }
+      roomCode.value = newRoomCode
+      currentPlayer.value = player
+      router.push({ name: 'lobby', params: { roomCode: newRoomCode } })
     })
   }
 
@@ -266,7 +293,7 @@ export const useGameStore = defineStore('game', () => {
 
     socket.on('description-submitted', (data: { 
       playerId: string, 
-      descriptions: DescriptionType,
+      descriptions: ResultType,
       nextTurn: number,
       round: number
     }) => {
@@ -327,11 +354,7 @@ export const useGameStore = defineStore('game', () => {
     })
 
     socket.on('error', (data: { message: string }) => {
-      error.value = data.message
-      
-      setTimeout(() => {
-        error.value = null
-      }, 5000)
+      showError(data.message)
     })
   }
 

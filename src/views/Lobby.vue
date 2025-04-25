@@ -89,10 +89,6 @@ const leaveRoom = () => {
           </div>
         </div>
         
-        <div v-if="gameStore.error" class="mb-6 p-4 bg-error-500 bg-opacity-10 border border-error-500 rounded-lg text-error-500 text-center">
-          {{ gameStore.error }}
-        </div>
-        
         <div class="mb-8">
           <h2 class="text-xl font-semibold mb-4">Players ({{ players.length }})</h2>
           

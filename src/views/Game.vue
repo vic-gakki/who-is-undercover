@@ -120,11 +120,6 @@ const cancelLeave = () => {
         <!-- Voting Phase -->
         <VotingPhase
           v-if="gameStore.gamePhase === 'voting'"
-          :active-players="gameStore.activePlayers"
-          :current-player="gameStore.currentPlayer"
-          :can-vote="gameStore.canVote"
-          :votes="gameStore.votes"
-          :vote-results="gameStore.voteResults"
           @submit-vote="gameStore.submitVote"
         />
         
