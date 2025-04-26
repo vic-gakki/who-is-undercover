@@ -5,10 +5,9 @@ import { storeToRefs } from 'pinia'
 const gameStore = useGameStore()
 const {
   currentPlayer,
-  votes,
   canVote,
   activePlayers,
-  voteResults
+  round
 } = storeToRefs(gameStore)
 const emit = defineEmits<{
   (e: 'submitVote', targetId: string): void
@@ -19,12 +18,12 @@ const isLoading = ref(false)
 
 const hasVoted = computed(() => {
   if (!currentPlayer.value) return false
-  return currentPlayer.value.id in votes.value
+  return currentPlayer.value.votes?.[round.value ?? 0]
 })
 
 const myVote = computed(() => {
   if (!currentPlayer.value || !hasVoted.value) return null
-  return votes.value[currentPlayer.value.id]
+  return currentPlayer.value.votes?.[round.value ?? 0]
 })
 
 const submitVote = () => {
@@ -39,8 +38,24 @@ const submitVote = () => {
   }, 500)
 }
 
+const votedPlayers = computed(() => {
+  return activePlayers.value.filter(player => player.votes?.[round.value ?? 0])
+})
+
 const isVoteComplete = computed(() => {
-  return Object.keys(votes.value).length === activePlayers.value.length
+  return votedPlayers.value.length === activePlayers.value.length
+})
+
+const voteResults = computed(() => {
+  return activePlayers.value.reduce((acc: Record<string, number>, cur) => {
+    const targetId = cur.votes?.[round.value ?? 0]!
+    if(targetId in acc){
+      acc[targetId]++
+    }else {
+      acc[targetId] = 1
+    }
+    return acc
+  }, {})
 })
 
 const getVoteCount = (playerId: string) => {
@@ -50,7 +65,7 @@ const getVoteCount = (playerId: string) => {
 
 <template>
   <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg max-w-md w-full p-6 animate-slide-up"">
+    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg max-w-md w-full p-6 animate-slide-up">
       <div
         class="mb-6 p-4 rounded-lg"
         :class="{ 
@@ -146,13 +161,13 @@ const getVoteCount = (playerId: string) => {
           <div class="mb-4">
             <div class="flex justify-between items-center mb-2">
               <span class="text-sm font-medium">Votes Cast</span>
-              <span class="text-sm font-bold">{{ Object.keys(votes).length }} / {{ activePlayers.length }}</span>
+              <span class="text-sm font-bold">{{ votedPlayers.length }} / {{ activePlayers.length }}</span>
             </div>
             
             <div class="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
               <div 
                 class="h-full bg-primary-500 transition-all" 
-                :style="{ width: `${(Object.keys(votes).length / activePlayers.length) * 100}%` }"
+                :style="{ width: `${(votedPlayers.length / activePlayers.length) * 100}%` }"
               ></div>
             </div>
           </div>

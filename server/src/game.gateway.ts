@@ -87,14 +87,17 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const playerData = room.players.find(p => p.id === player.id);
         if (playerData) {
           client.emit('game-started', {
-            players: room.players.map(p => ({
-              id: p.id,
-              name: p.name,
-              isHost: p.isHost,
-              isUndercover: p.id === player.id ? p.isUndercover : undefined,
-              word: p.id === player.id ? p.word : undefined,
-            })),
+            players: room.players.map(p => {
+              const {socketId, ...res} = p
+              return {
+                ...res,
+                isUndercover: p.id === player.id ? p.isUndercover : undefined,
+                word: p.id === player.id ? p.word : undefined,
+              }
+            }),
             word: playerData.word,
+            phase: room.phase,
+            round: room.round
           });
         }
       }
@@ -110,57 +113,87 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const room = this.gameService.startGame(payload.roomCode);
     
     if (room) {
+      room.phase = 'description';
       room.players.forEach(player => {
         this.server.to(player.socketId).emit('game-started', {
-          players: room.players.map(p => ({
-            id: p.id,
-            name: p.name,
-            isHost: p.isHost,
-            isUndercover: p.id === player.id ? p.isUndercover : undefined,
-            word: p.id === player.id ? p.word : undefined,
-          })),
+          players: room.players.map(p => {
+            const {socketId, ...res} = p
+            return {
+              ...res,
+              isUndercover: p.id === player.id ? p.isUndercover : undefined,
+              word: p.id === player.id ? p.word : undefined,
+            }
+          }),
           word: player.word,
+          phase: room.phase
         });
       });
-      room.phase = 'description';
-      this.server.to(payload.roomCode).emit('phase-changed', { phase: 'description' });
     }
   }
 
   @SubscribeMessage('submit-description')
   handleSubmitDescription(client: Socket, payload: { roomCode: string; playerId: string; description: string }) {
-    const room = this.gameService.submitDescription(
+    const res = this.gameService.submitDescription(
       payload.roomCode,
       payload.playerId,
       payload.description
     );
     
-    // if (room) {
-    //   // Broadcast the new description to all players
-    //   this.server.to(payload.roomCode).emit('description-submitted', {
-    //     playerId: payload.playerId,
-    //     nextTurn: room.currentTurn,
-    //     descriptions: room.descriptions,
-    //     round: room.round
-    //   });
+    if (res) {
+      // Broadcast the new description to all players
+      const {room, roundEnd} = res
+      this.server.to(payload.roomCode).emit('description-submitted', {
+        players: room.players,
+      });
 
-    //   // Move to next turn or voting phase if all descriptions are in
-    //   if (!room.descriptions[room.round]) {
-    //     room.phase = 'voting';
-    //     this.server.to(payload.roomCode).emit('phase-changed', { phase: 'voting' });
-    //   }
-    // }
+      // Move to next turn or voting phase if all descriptions are in
+      if (roundEnd) {
+        room.phase = 'voting';
+        this.server.to(payload.roomCode).emit('phase-changed', { phase: room.phase });
+      }
+    }
   }
   @SubscribeMessage('cast-vote')
   handleCastVote(client: Socket, payload: { roomCode: string; voterId: string; targetId: string }) {
-    const room = this.gameService.castVote(payload.roomCode, payload.voterId, payload.targetId);
-    
-    // if (room) {
-    //   this.server.to(payload.roomCode).emit('vote-cast', {
-    //     voterId: payload.voterId,
-    //     targetId: payload.targetId,
-    //     allVotes: room.votes,
-    //   });
-    // }
+    const res = this.gameService.castVote(payload.roomCode, payload.voterId, payload.targetId);
+    if (res) {
+      const {room, voteDone, gameOver, voteConflict, winner} = res
+      this.server.to(payload.roomCode).emit('vote-cast', {
+        players: room.players,
+      });
+      if (voteDone) {
+        if(gameOver){
+          room.phase = 'results';
+          this.server.to(payload.roomCode).timeout(3000).emit('game-end', {
+            players: room.players,
+            winner,
+            phase: room.phase
+          })
+        }else if(voteConflict) {
+          this.server.to(payload.roomCode).timeout(3000).emit('vote-conflict', {
+            players: room.players,
+          })
+        }else {
+          room.phase = 'description';
+          room.round++
+          this.server.to(payload.roomCode).timeout(3000).emit('new-round', {
+            players: room.players,
+            round: room.round,
+            phase: room.phase
+          })
+        }
+      }
+    }
+  }
+  @SubscribeMessage('reset-game')
+  handleResetGame(client: Socket, roomCode: string) {
+    const room = this.gameService.resetGame(roomCode);
+    if (room) {
+      this.server.to(roomCode).timeout(3000).emit('game-reset', {
+        players: room.players,
+        round: room.round,
+        phase: room.phase
+      })
+    }
   }
 }

@@ -2,7 +2,6 @@
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useGameStore } from '../stores/gameStore'
-import PlayerCard from '../components/PlayerCard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,7 +10,7 @@ const gameStore = useGameStore()
 const roomCode = computed(() => route.params.roomCode as string)
 const winner = computed(() => gameStore.winner)
 const isUndercover = computed(() => gameStore.currentPlayer?.isUndercover)
-const undercoverPlayer = computed(() => gameStore.players.find(p => p.isUndercover))
+const undercoverPlayers = computed(() => gameStore.players.filter(p => p.isUndercover))
 const civilianPlayers = computed(() => gameStore.players.filter(p => !p.isUndercover))
 
 onMounted(() => {
@@ -80,16 +79,18 @@ const leaveGame = () => {
             <div class="p-4 rounded-lg bg-accent-50 dark:bg-accent-900 dark:bg-opacity-20 border border-accent-200 dark:border-accent-800">
               <h3 class="text-lg font-medium mb-3 text-accent-700 dark:text-accent-300">Undercover</h3>
               
-              <div v-if="undercoverPlayer" class="flex items-center space-x-3">
-                <div class="w-10 h-10 rounded-full bg-accent-200 flex items-center justify-center text-accent-800 font-bold">
-                  {{ undercoverPlayer.name.charAt(0) }}
-                </div>
-                <div>
-                  <div class="font-medium">{{ undercoverPlayer.name }}</div>
-                  <div class="text-sm text-accent-600 dark:text-accent-400">Word: {{ undercoverPlayer.word }}</div>
-                </div>
-                <div v-if="undercoverPlayer.id === gameStore.currentPlayer?.id" class="ml-auto text-xs px-2 py-1 rounded-full bg-accent-200 text-accent-800">
-                  You
+              <div class="space-y-3">
+                <div v-for="undercoverPlayer of undercoverPlayers" :key="undercoverPlayer.id" class="flex items-center space-x-3">
+                  <div class="w-10 h-10 rounded-full bg-accent-200 flex items-center justify-center text-accent-800 font-bold">
+                    {{ undercoverPlayer.name.charAt(0) }}
+                  </div>
+                  <div>
+                    <div class="font-medium">{{ undercoverPlayer.name }}</div>
+                    <div class="text-sm text-accent-600 dark:text-accent-400">Word: {{ undercoverPlayer.word }}</div>
+                  </div>
+                  <div v-if="undercoverPlayer.id === gameStore.currentPlayer?.id" class="ml-auto text-xs px-2 py-1 rounded-full bg-accent-200 text-accent-800">
+                    You
+                  </div>
                 </div>
               </div>
             </div>
@@ -117,40 +118,6 @@ const leaveGame = () => {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-        
-        <!-- Eliminations -->
-        <div class="mb-8">
-          <h2 class="text-xl font-semibold mb-4">Elimination Order</h2>
-          
-          <div v-if="gameStore.eliminations.length > 0" class="space-y-2">
-            <div 
-              v-for="(playerId, index) in gameStore.eliminations" 
-              :key="playerId"
-              class="p-3 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center"
-            >
-              <span class="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm mr-3">
-                {{ index + 1 }}
-              </span>
-              
-              <span class="font-medium">
-                {{ gameStore.players.find(p => p.id === playerId)?.name }}
-              </span>
-              
-              <span 
-                class="ml-auto text-xs px-2 py-1 rounded-full"
-                :class="gameStore.players.find(p => p.id === playerId)?.isUndercover 
-                  ? 'bg-accent-100 text-accent-800 dark:bg-accent-900 dark:bg-opacity-50 dark:text-accent-300' 
-                  : 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:bg-opacity-50 dark:text-primary-300'"
-              >
-                {{ gameStore.players.find(p => p.id === playerId)?.isUndercover ? 'Undercover' : 'Civilian' }}
-              </span>
-            </div>
-          </div>
-          
-          <div v-else class="text-center text-gray-500 italic">
-            No eliminations occurred
           </div>
         </div>
         

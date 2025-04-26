@@ -13,10 +13,13 @@ export type Player = {
   isUndercover?: boolean
   isEliminated?: boolean
   word?: string
+  inTurn?: boolean;
+  descriptions?: string[];
+  votes?: string[];
 }
 
 export type GamePhase = 'waiting' | 'description' | 'voting' | 'results'
-export type ResultType = Array<Array<Record<string, string>>>
+export type PlayerType = 'civilians' | 'undercover'
 interface GameSession {
   playerId: string
   playerName: string
@@ -31,11 +34,7 @@ export const useGameStore = defineStore('game', () => {
   const players = ref<Player[]>([])
   const currentPlayer = ref<Player | null>(null)
   const gamePhase = ref<GamePhase>('waiting')
-  const currentTurn = ref<number>(0)
-  const descriptions = ref<ResultType>([])
-  const votes = ref<Record<string, string>>({})
-  const eliminations = ref<string[]>([])
-  const winner = ref<'civilians' | 'undercover' | null>(null)
+  const winner = ref<PlayerType | null>(null)
   const word = ref<string>('')
   const error = ref<string | null>(null)
   const isInitialized = ref(false)
@@ -44,32 +43,10 @@ export const useGameStore = defineStore('game', () => {
   // Getters
   const isHost = computed(() => currentPlayer.value?.isHost || false)
   const activePlayers = computed(() => players.value.filter(p => !p.isEliminated))
-  const currentTurnPlayer = computed(() => {
-    const playerIndex = currentTurn.value % activePlayers.value.length
-    return activePlayers.value[playerIndex] || null
-  })
-  const isCurrentTurn = computed(() => 
-    currentTurnPlayer.value?.id === currentPlayer.value?.id
-  )
+  const currentTurnPlayer = computed(() => players.value.find(player => player.inTurn))
   const canVote = computed(() => 
-    gamePhase.value === 'voting' && !votes.value[currentPlayer.value?.id || '']
+    gamePhase.value === 'voting' && !currentPlayer.value?.votes?.[round.value ?? 0]
   )
-  const voteResults = computed(() => {
-    const results: Record<string, number> = {}
-    Object.values(votes.value).forEach(playerId => {
-      results[playerId] = (results[playerId] || 0) + 1
-    })
-    return results
-  })
-  const mostVotedPlayer = computed(() => {
-    const results = voteResults.value
-    if (Object.keys(results).length === 0) return null
-    
-    return Object.entries(results).reduce(
-      (max, [playerId, count]) => count > max.count ? { playerId, count } : max,
-      { playerId: '', count: 0 }
-    ).playerId
-  })
   const gameOver = computed(() => {
     if (!winner.value) return false
     return true
@@ -113,6 +90,11 @@ export const useGameStore = defineStore('game', () => {
     }
   })
 
+
+  watch(players, () => {
+    currentPlayer.value = players.value.find(player => player.id === currentPlayer.value?.id) ?? null
+  })
+
   // Actions
   function initializeSocketConnection() {
     if (!isInitialized.value) {
@@ -139,6 +121,8 @@ export const useGameStore = defineStore('game', () => {
             showError(room.error)
             router.replace('/')
             clearSession()
+          }else if(room) {
+            router.replace({ name: 'game', params: { roomCode: roomCode.value } })
           }
         })
       }
@@ -210,7 +194,7 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function submitDescription(description: string) {
-    if (!isCurrentTurn.value || !currentPlayer.value) return
+    if (!currentPlayer.value) return
     
     socket.emit('submit-description', {
       roomCode: roomCode.value,
@@ -250,10 +234,6 @@ export const useGameStore = defineStore('game', () => {
     players.value = []
     currentPlayer.value = null
     gamePhase.value = 'waiting'
-    currentTurn.value = 0
-    descriptions.value = []
-    votes.value = {}
-    eliminations.value = []
     winner.value = null
     word.value = ''
     round.value = null
@@ -278,7 +258,7 @@ export const useGameStore = defineStore('game', () => {
       players.value = players.value.filter(p => p.id !== data.playerId)
     })
 
-    socket.on('game-started', (data: { players: Player[], word: string }) => {
+    socket.on('game-started', (data: { players: Player[], word: string, phase: GamePhase }) => {
       players.value = data.players
       
       const player = data.players.find(p => p.id === currentPlayer.value?.id)
@@ -287,19 +267,13 @@ export const useGameStore = defineStore('game', () => {
         currentPlayer.value = { ...currentPlayer.value, ...player }
       }
       
-      gamePhase.value = 'description'
-      currentTurn.value = 0
+      gamePhase.value = data.phase
     })
 
     socket.on('description-submitted', (data: { 
-      playerId: string, 
-      descriptions: ResultType,
-      nextTurn: number,
-      round: number
+      players: Player[]
     }) => {
-      descriptions.value = data.descriptions
-      currentTurn.value = data.nextTurn
-      round.value = data.round
+      players.value = data.players
     })
 
     socket.on('phase-changed', (data: { 
@@ -309,48 +283,44 @@ export const useGameStore = defineStore('game', () => {
     })
 
     socket.on('vote-cast', (data: { 
-      voterId: string, 
-      targetId: string, 
-      allVotes: Record<string, string> 
+      players: Player[]
     }) => {
-      votes.value = data.allVotes
+      players.value = data.players
     })
 
-    socket.on('player-eliminated', (data: { 
-      playerId: string, 
-      isUndercover: boolean, 
-      nextRound: boolean, 
-      winner: 'civilians' | 'undercover' | null 
+    socket.on('game-reset', (data: {
+      players: Player[]
     }) => {
-      players.value = players.value.map(p => 
-        p.id === data.playerId ? { ...p, isEliminated: true } : p
-      )
-      
-      eliminations.value.push(data.playerId)
-      winner.value = data.winner
-      
-      if (data.nextRound) {
-        gamePhase.value = 'description'
-        votes.value = {}
-        currentTurn.value = 0
-      }
-    })
-
-    socket.on('game-reset', () => {
       gamePhase.value = 'waiting'
-      currentTurn.value = 0
-      descriptions.value = []
-      votes.value = {}
-      eliminations.value = []
       winner.value = null
       word.value = ''
+      round.value = null
+      players.value = data.players
+      router.replace({ name: 'lobby', params: { roomCode: roomCode.value } })
+    })
+
+    socket.on('new-round', (data: {
+      players: Player[],
+      round: number,
+      phase: GamePhase
+    }) => {
+      players.value = data.players
+      round.value = data.round
+      gamePhase.value = data.phase
+    })
+
+    socket.on('vote-conflict', () => {
       
-      players.value = players.value.map(p => ({
-        ...p,
-        isUndercover: undefined,
-        isEliminated: undefined,
-        word: undefined
-      }))
+    })
+
+    socket.on('game-end', (data: {
+      players: Player[],
+      winner: PlayerType,
+      phase: GamePhase
+    }) => {
+      players.value = data.players
+      winner.value = data.winner
+      gamePhase.value = data.phase
     })
 
     socket.on('error', (data: { message: string }) => {
@@ -363,23 +333,17 @@ export const useGameStore = defineStore('game', () => {
     roomCode,
     players,
     currentPlayer,
+    currentTurnPlayer,
     gamePhase,
-    currentTurn,
-    descriptions,
-    votes,
-    eliminations,
     winner,
     word,
     error,
+    round,
     
     // Getters
     isHost,
     activePlayers,
-    currentTurnPlayer,
-    isCurrentTurn,
     canVote,
-    voteResults,
-    mostVotedPlayer,
     gameOver,
     socketConnected,
     socketError,

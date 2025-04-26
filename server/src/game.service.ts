@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Socket } from 'socket.io';
 
+export type GamePhase = 'waiting' | 'description' | 'voting' | 'results'
+export type PlayerType = 'civilians' | 'undercover'
+
 export interface RoomSetting {
   mode: 'online' | 'offline';
   password?: string;
@@ -21,10 +24,13 @@ export interface Player {
 export interface GameRoom extends RoomSetting {
   code: string;
   players: Player[];
-  phase: 'waiting' | 'description' | 'voting' | 'results';
+  phase: GamePhase;
   civilianWord?: string;
+  civilNumber?: number;
+  undercoverNumber?: number;
   undercoverWord?: string;
   round: number;
+  winner?: PlayerType
 }
 
 @Injectable()
@@ -104,6 +110,7 @@ export class GameService {
       isUndercover: index === undercoverIndex,
       word: index === undercoverIndex ? words.undercover : words.civilian,
       isEliminated: false,
+      inTurn: index === 0
     }));
     
     room.phase = 'description';
@@ -123,18 +130,29 @@ export class GameService {
     return wordPairs[Math.floor(Math.random() * wordPairs.length)];
   }
 
-  submitDescription(roomCode: string, playerId: string, description: string): GameRoom | null {
+  submitDescription(roomCode: string, playerId: string, description: string): {room: GameRoom, roundEnd: boolean} | null {
     const room = this.rooms.get(roomCode);
     if (!room) return null;
+    const activePlayers = this.getActivePlayers(roomCode)
+    const playerIndex = activePlayers.findIndex(player => player.id === playerId)
+    const roundEnd = playerIndex === activePlayers.length - 1
+    const currentPlayer = activePlayers[playerIndex]
+    if(currentPlayer){
+      if(!currentPlayer.descriptions){
+        currentPlayer.descriptions = []
+      }
+      currentPlayer.descriptions[room.round] = description
+    }
+    currentPlayer.inTurn = false
+
+    if(!roundEnd){
+      room.players[playerIndex + 1].inTurn = true
+    }
     
-    const name = room.players.find(player => player.id === playerId)?.name;
-    // room.descriptions[room.round].push({ playerId, description, name });
-    // // Move to next player's turn
-    // room.currentTurn = (room.currentTurn + 1) % this.getActivePlayers(roomCode).length;
-    // if(room.currentTurn === 0){
-    //   room.round++
-    // }
-    return room;
+    return {
+      room,
+      roundEnd
+    }
   }
 
   getActivePlayers(roomCode: string): Player[] | null {
@@ -144,36 +162,92 @@ export class GameService {
     return room.players.filter(player => !player.isEliminated);
   }
 
-  castVote(roomCode: string, voterId: string, targetId: string): GameRoom | null {
+  castVote(roomCode: string, voterId: string, targetId: string): {room: GameRoom, voteDone: boolean, gameOver: boolean, voteConflict: boolean, winner: string} | null {
     const room = this.rooms.get(roomCode);
     if (!room) return null;
-    // if(!room.votes[room.round]){
-    //   room.votes[room.round] = []
-    // }
-    // room.votes[room.round].push({ voterId, targetId });
-    
-    // // Check if all players have voted
-    // if (Object.keys(room.votes).length === room.players.length) {
-    //   const voteCounts = Object.values(room.votes).reduce((acc, vote) => {
-    //     acc[vote] = (acc[vote] || 0) + 1;
-    //     return acc;
-    //   }, {} as Record<string, number>);
-      
-    //   const maxVotes = Math.max(...Object.values(voteCounts));
-    //   const targets = Object.keys(voteCounts).filter(playerId => voteCounts[playerId] === maxVotes);
-      
-    //   if (targets.length > 0) {
-    //     const targetId = targets[0];
-    //     const targetPlayer = room.players.find(player => player.id === targetId);
-        
-    //     if (targetPlayer) {
-    //       targetPlayer.isEliminated = true;
-    //       room.phase = 'results';
-    //       room.votes = {}; // Reset votes for the next round
-    //     }
-    //   }
-    // }
-    
-    return room;
+    const voter = room.players.find(player => player.id === voterId)
+    if(!voter.votes){
+      voter.votes = []
+    }
+    voter.votes[room.round] = targetId
+    let activePlayers = this.getActivePlayers(roomCode)
+    const voteDone = activePlayers.every(player => !!player.votes?.[room.round])
+    let gameOver = false
+    let voteConflict = false
+    let winner
+    if(voteDone){
+      const res = activePlayers.reduce((acc: Record<string, number>, cur) => {
+        const id = cur.votes[room.round]
+        if(id in acc){
+          acc[id]++
+        }else {
+          acc[id] = 1
+        }
+        return acc
+      }, {})
+      const votes = Object.values(res)
+      votes.sort()
+      const maxVotes = votes.pop()
+      const snd = votes.pop()
+      let maxVotesId
+      let maxVotePlayer
+      if(maxVotes === snd) {
+        // share same vote
+        voteConflict = true
+      }else {
+        for(let key in res){
+          if(res[key] === maxVotes){
+            maxVotesId = key
+          }
+        }
+      }
+      if(maxVotesId){
+        maxVotePlayer = room.players.find(player => player.id === maxVotesId)
+        maxVotePlayer.isEliminated = true
+        activePlayers = this.getActivePlayers(roomCode)
+      }
+      const undercoverNum = activePlayers.filter(player => player.isUndercover).length
+      const civilNum = activePlayers.filter(player => !player.isUndercover).length
+      if(undercoverNum === 0){
+        gameOver = true
+        winner = 'civil'
+      }else if(undercoverNum >= civilNum){
+        gameOver = true
+        winner = 'undercover'
+      }
+    }
+    if(gameOver){
+      room.winner = winner
+    }
+    return {
+      room,
+      voteDone,
+      gameOver,
+      voteConflict,
+      winner
+    };
+  }
+  resetGame(roomCode: string){
+    const room = this.rooms.get(roomCode);
+    if (!room) return null;
+    room.civilNumber = 0
+    room.civilianWord = undefined
+    room.undercoverNumber = 0
+    room.undercoverWord = undefined
+    room.round = null
+    room.phase = 'waiting'
+    room.winner = undefined
+    room.players = room.players.map(player => {
+      return {
+        ...player,
+        isUndercover: undefined,
+        word: undefined,
+        isEliminated: undefined,
+        inTurn: undefined,
+        descriptions: undefined,
+        votes: undefined
+      }
+    })
+    return room
   }
 }
