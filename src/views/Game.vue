@@ -1,48 +1,24 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import DescriptionPhase from '../components/DescriptionPhase.vue'
 import VotingPhase from '../components/VotingPhase.vue'
+import { storeToRefs } from 'pinia'
 
-const route = useRoute()
-const router = useRouter()
 const gameStore = useGameStore()
 
+const {
+  roomCode,
+  word,
+  isUndercover,
+  gamePhase,
+  activePlayers,
+  players
+} = storeToRefs(gameStore)
+
 const showWordModal = ref(true)
-const modalAutoOpen = computed(() => gameStore.gamePhase === 'description')
+const modalAutoOpen = computed(() => gamePhase.value === 'description')
 const showLeaveConfirm = ref(false)
-
-const roomCode = computed(() => route.params.roomCode as string)
-const word = computed(() => gameStore.word)
-const isUndercover = computed(() => gameStore.currentPlayer?.isUndercover)
-
-// Watch for game phase changes
-watch(() => gameStore.gamePhase, (newPhase) => {
-  if (newPhase === 'results') {
-    router.replace({ name: 'results', params: { roomCode: roomCode.value } })
-  }
-})
-
-// Watch for game over state
-watch(() => gameStore.gameOver, (isGameOver) => {
-  if (isGameOver) {
-    router.replace({ name: 'results', params: { roomCode: roomCode.value } })
-  }
-})
-
-onMounted(() => {
-  // If we don't have a current player or word, go back to home
-  if (!gameStore.currentPlayer || !gameStore.word) {
-    router.replace('/')
-    return
-  }
-  
-  // If roomCode from route doesn't match store, update store
-  if (gameStore.roomCode !== roomCode.value) {
-    gameStore.roomCode = roomCode.value
-  }
-})
 
 const closeWordModal = () => {
   showWordModal.value = false
@@ -50,7 +26,6 @@ const closeWordModal = () => {
 
 const leaveGame = () => {
   gameStore.leaveRoom()
-  router.replace('/')
 }
 
 const confirmLeave = () => {
@@ -69,8 +44,8 @@ const cancelLeave = () => {
         <div class="flex flex-col md:flex-row justify-between items-center mb-8">
           <div>
             <h1 class="text-2xl md:text-3xl font-bold mb-2">
-              <span v-if="gameStore.gamePhase === 'description'">Description Phase</span>
-              <span v-else-if="gameStore.gamePhase === 'voting'">Voting Phase</span>
+              <span v-if="gamePhase === 'description'">Description Phase</span>
+              <span v-else-if="gamePhase === 'voting'">Voting Phase</span>
             </h1>
             <p class="text-gray-500">Room: {{ roomCode }}</p>
           </div>
@@ -88,16 +63,12 @@ const cancelLeave = () => {
           </div>
         </div>
         
-        <div v-if="gameStore.error" class="mb-6 p-4 bg-error-500 bg-opacity-10 border border-error-500 rounded-lg text-error-500 text-center">
-          {{ gameStore.error }}
-        </div>
-        
         <!-- Game Status Indicators -->
         <div class="mb-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
           <div class="flex flex-col sm:flex-row justify-between items-center">
             <div class="mb-4 sm:mb-0">
               <div class="text-sm text-gray-500 mb-1">Players Remaining</div>
-              <div class="font-bold text-lg">{{ gameStore.activePlayers.length }} / {{ gameStore.players.length }}</div>
+              <div class="font-bold text-lg">{{ activePlayers.length }} / {{ players.length }}</div>
             </div>
             
             <div class="flex items-center space-x-3">
@@ -120,7 +91,7 @@ const cancelLeave = () => {
         
         <!-- Voting Phase -->
         <VotingPhase
-          v-if="gameStore.gamePhase === 'voting'"
+          v-if="gamePhase === 'voting'"
           @submit-vote="gameStore.submitVote"
         />
         

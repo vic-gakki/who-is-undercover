@@ -37,34 +37,31 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } = this.gameService.createRoom(payload.roomCode, player, payload.settings);
     
     client.join(payload.roomCode);
-    this.server.to(payload.roomCode).emit('room-joined', { players: this.gameService.maskPlayerInfo(data.room.players, player.id) });
+    this.server.to(payload.roomCode).emit('room-joined', { players: this.gameService.maskPlayerInfo(data.room.players), roomCode: data.room.code });
   }
 
   @SubscribeMessage('join-room')
   handleJoinRoom(client: Socket, payload: { roomCode: string; player: Player; password?: string }) {
     const player = { ...payload.player, socketId: client.id };
     const res = this.gameService.joinRoom(payload.roomCode, player, payload.password);
-    const {room} = res.data as {room: GameRoom}
     if(!res.success) {
       return res
     }
+    const {room} = res.data as {room: GameRoom}
     client.join(payload.roomCode);
-    this.server.to(payload.roomCode).emit('room-joined', { players: this.gameService.maskPlayerInfo(room.players, player.id) });
+    this.server.to(payload.roomCode).emit('room-joined', { players: this.gameService.maskPlayerInfo(room.players), roomCode: room.code });
   }
 
   emitGameStatusUpdate(res){
     if(res.success){
-      let { room, tie, maxVoteCount, winner, playerId } = res.data as {room: GameRoom, [key:string]: any}
+      let { room, tie, maxVoteCount, playerId } = res.data as {room: GameRoom, [key:string]: any}
       const roomCode = room.code
       switch (res.msg) {
         case OperateionMessage.PLAYER_LEFT:
           this.server.to(room.code).emit('player-left', playerId);
           break;
         case OperateionMessage.GAME_ENDED:
-          this.server.to(roomCode).emit('game-end', {
-            room,
-            winner
-          });
+          this.server.to(roomCode).emit('game-end', room);
           break;
         case OperateionMessage.DESCRIPTION_SUBMITTED:
           this.server.to(roomCode).emit('description-submitted', {
@@ -78,6 +75,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
             votes: room.votes,
             phase: room.phase,
             round: room.round,
+            descriptions: room.descriptions,
             tie: tie,
             maxVotes: maxVoteCount,
             players: this.gameService.maskPlayerInfo(room.players)
@@ -102,7 +100,8 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if(!res.success){
       return res
     }
-    res.data.room = this.gameService.maskRoomInfo(res.data.room, player.id)
+    client.join(payload.roomCode);
+    res.data.room.players = this.gameService.maskPlayerInfo(res.data.room.players, player.id)
     return res
   }
 
@@ -116,7 +115,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     data.room.players.forEach(player => {
       this.server.to(player.socketId).emit('game-started', {
         players: this.gameService.maskPlayerInfo(data.room.players, player.id),
-        word: player.word,
       });
     });
   }
@@ -141,9 +139,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const res = this.gameService.resetGame(roomCode);
     if (res.success) {
       const {room} = res.data as {room: GameRoom}
-      this.server.to(roomCode).emit('game-reset', {
-        ...room
-      })
+      this.server.to(roomCode).emit('game-reset', room)
     }
   }
 }

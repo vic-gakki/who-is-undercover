@@ -1,16 +1,12 @@
 <script setup lang="ts">
-import { RouterView, useRouter } from 'vue-router'
+import { RouterView } from 'vue-router'
 import { useGameStore } from './stores/gameStore';
 import { onMounted } from 'vue';
 import Error from './components/Error.vue';
 const gameStore = useGameStore()
-const router = useRouter()
 onMounted(() => {
   // Initialize the socket connection status on component mount
   gameStore.initializeSocketConnection()
-  if(gameStore.currentPlayer){
-    router.push({ name: 'lobby', params: { roomCode: gameStore.roomCode } })
-  }
 })
 </script>
 

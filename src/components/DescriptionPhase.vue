@@ -7,7 +7,8 @@ const {
   players,
   round,
   currentPlayer,
-  currentTurnPlayer
+  currentTurnPlayer,
+  descriptions,
 } = storeToRefs(useGameStore())
 
 const emit = defineEmits<{
@@ -94,34 +95,33 @@ const submitDescription = () => {
     </div>
     
     <!-- Previous Descriptions -->
-    <div class="mt-8">
+    <div class="mt-8" v-if="round">
       <h3 class="text-lg font-semibold mb-4">Previous Descriptions</h3>
       
       <div class="space-y-4">
-        <div v-for="(r, rindex) in ((round ?? 0) + 1)">
+        <div v-for="(r) in (round + 1)">
           <p>Round {{ r }}</p>
-          <template v-for="(player, index) in players">
-            <div
-              v-if="player.descriptions?.[rindex]"
-              :key="player.id"
-              class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 animate-fade-in"
-            >
-              <div class="flex items-start">
-                <div class="w-8 h-8 rounded-full bg-secondary-500 flex items-center justify-center text-white font-medium text-sm mr-3 flex-shrink-0">
-                  {{ index + 1 }}
-                </div>
-                
-                <div>
-                  <div class="font-medium mb-1">
-                    {{ player.id === currentPlayer?.id ? 'You' : player.name }}
+            <template v-for="(player, index) in players" :key="player.id">
+              <div
+                v-if="player.id in descriptions[round]"
+                class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 animate-fade-in"
+              >
+                <div class="flex items-start">
+                  <div class="w-8 h-8 rounded-full bg-secondary-500 flex items-center justify-center text-white font-medium text-sm mr-3 flex-shrink-0">
+                    {{ index + 1 }}
                   </div>
-                  <p class="text-gray-700 dark:text-gray-300">
-                    "{{ player.descriptions?.[rindex] }}"
-                  </p>
+                  
+                  <div>
+                    <div class="font-medium mb-1">
+                      {{ player.id === currentPlayer?.id ? 'You' : player.name }}
+                    </div>
+                    <p class="text-gray-700 dark:text-gray-300">
+                      "{{ descriptions[round][player.id] }}"
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </template>
+            </template>
         </div>
       </div>
     </div>

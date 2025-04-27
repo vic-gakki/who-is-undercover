@@ -4,10 +4,14 @@ import { v4 as uuidv4 } from 'uuid'
 import { socket, isConnected, connectionError } from '../services/socketService'
 import socketService from '../services/socketService'
 import { useRouter } from 'vue-router'
-import type {Player, GamePhase, descriptionType, voteType, PlayerType, GameRoom} from '../../server/src/type'
+import type {Player, GamePhase, descriptionType, voteType, GameRoom} from '../../server/src/type'
 interface GameSession {
   roomCode: string
   player: Pick<Player, 'id' | 'name' | 'isHost'>
+}
+interface UpdateOptions {
+  exit?: boolean, 
+  room?: GameRoom
 }
 
 const ERROR_TIMEOUT = 1500
@@ -18,15 +22,16 @@ export const useGameStore = defineStore('game', () => {
   const roomCode = ref<string>('')
   const players = ref<Player[]>([])
   const gamePhase = ref<GamePhase | null>(null)
-  const gaming = ref(false)
-  const winner = ref()
+  const winner = ref('')
   const word = ref('')
   const isUndercover = ref(false)
   const error = ref<string | null>(null)
   const isInitialized = ref(false)
-  const round = ref(0)
+  const round = ref<number | null>(null)
   const votes = ref<voteType>([])
   const descriptions = ref<descriptionType>([])
+  const civilianWord = ref('')
+  const undercoverWord = ref('')
   const currentPlayerId = ref('')
 
   // Getters
@@ -35,7 +40,7 @@ export const useGameStore = defineStore('game', () => {
   const activePlayers = computed(() => players.value.filter(p => !p.isEliminated))
   const currentTurnPlayer = computed(() => players.value.find(player => player.inTurn))
   const canVote = computed(() =>
-    currentPlayer.value && gaming.value && gamePhase.value === 'voting' && !descriptions.value[round.value][currentPlayer.value.id]
+    currentPlayer.value && round.value && gamePhase.value === 'voting' && !descriptions.value[round.value][currentPlayer.value.id]
   )
   const gameOver = computed(() => {
     if (!winner.value) return false
@@ -83,6 +88,23 @@ export const useGameStore = defineStore('game', () => {
     }
   })
 
+  watch(gamePhase, () => {
+    switch(gamePhase.value){
+      case null:
+        router.replace('/')
+        break;
+      case 'waiting':
+        router.replace({ name: 'lobby', params: { roomCode: roomCode.value } })
+        break;
+      case 'description':
+      case "voting":
+        router.replace({ name: 'game', params: { roomCode: roomCode.value } })
+        break;
+      case 'results':
+        router.replace({ name: 'results', params: { roomCode: roomCode.value } })
+    }
+  })
+
   // Actions
   function initializeSocketConnection() {
     if (!isInitialized.value) {
@@ -101,16 +123,11 @@ export const useGameStore = defineStore('game', () => {
             router.replace('/')
             clearSession()
           }else {
-            const {room, player} = data as {room: GameRoom, player: Player}
-            gamePhase.value = room.phase
-            round.value = room.round!
-            players.value = room.players
-            word.value = player.word!
-            isUndercover.value = player.isUndercover!
-            descriptions.value = room.descriptions!
-            votes.value = room.votes!
-            roomCode.value = room.code
-            currentPlayerId.value = player.id
+            const {room, currentPlayer} = data as {room: GameRoom, currentPlayer: Player}
+            updateGameInfo({room})
+            word.value = currentPlayer.word!
+            isUndercover.value = currentPlayer.isUndercover!
+            currentPlayerId.value = currentPlayer.id
           }
         })
       }
@@ -132,7 +149,6 @@ export const useGameStore = defineStore('game', () => {
     }
 
     currentPlayerId.value = playerId
-    
     roomCode.value = newRoomCode
     
     socket.emit('create-room', {
@@ -171,9 +187,6 @@ export const useGameStore = defineStore('game', () => {
         showError(res.msg)
         return
       }
-      
-      // roomCode.value = newRoomCode
-      // router.push({ name: 'lobby', params: { roomCode: newRoomCode } })
     })
   }
 
@@ -222,99 +235,80 @@ export const useGameStore = defineStore('game', () => {
     })
     
     clearSession()
-    roomCode.value = ''
-    players.value = []
-    gamePhase.value = ''
-    winner.value = null
-    word.value = ''
-    isUndercover.value = false
-    round.value = null
-    descriptions.value = []
-    votes.value = []
+    updateGameInfo({exit: true})
+    currentPlayerId.value = ''
   }
 
   // Helper functions
   function generateRoomCode() {
     return Math.random().toString(36).substring(2, 8).toUpperCase()
   }
+  
+  function updateGameInfo({exit = false, room}: UpdateOptions = {exit: false}){
+    exit && (roomCode.value = '')
+    exit && (currentPlayerId.value = '')
+    !room && (word.value = '')
+    !room && (isUndercover.value = false)
+    players.value = exit ? [] : room!.players
+    gamePhase.value = exit ? null : room!.phase
+    round.value = exit ? null : room!.round
+    winner.value = room?.winner ?? ''
+    votes.value = room?.votes ?? []
+    descriptions.value = room?.descriptions ?? []
+    civilianWord.value = room?.civilianWord ?? ''
+    undercoverWord.value = room?.undercoverWord ?? ''
+    roomCode.value = room?.code ?? ''
+  }
 
   // Socket listeners
   function initSocketListeners() {
-    socket.on('room-joined', (data: { players: Player[] }) => {
+    socket.on('room-joined', (data: { players: Player[], roomCode: string }) => {
       players.value = data.players
-    })
-
-    socket.on('player-joined', (data: { player: Player }) => {
-      players.value.push(data.player)
+      gamePhase.value = 'waiting'
+      roomCode.value = data.roomCode
     })
 
     socket.on('player-left', (data: { playerId: string }) => {
       players.value = players.value.filter(p => p.id !== data.playerId)
     })
 
-    socket.on('game-started', (data: { players: Player[], word: string, phase: GamePhase }) => {
+    socket.on('game-started', (data: { players: Player[] }) => {
       players.value = data.players
-      
-      const player = data.players.find(p => p.id === currentPlayer.value?.id)
-      if (player) {
-        word.value = player.word || ''
-        currentPlayer.value = { ...currentPlayer.value, ...player }
-      }
-      
-      gamePhase.value = data.phase
+      word.value = currentPlayer.value?.word!
+      isUndercover.value = currentPlayer.value?.isUndercover!
+      gamePhase.value = 'description'
+      round.value = 0
     })
 
     socket.on('description-submitted', (data: { 
-      players: Player[]
+      players: Player[],
+      descriptions: descriptionType,
+      phase: GamePhase
     }) => {
       players.value = data.players
-    })
-
-    socket.on('phase-changed', (data: { 
-      phase: GamePhase, 
-    }) => {
+      descriptions.value = data.descriptions
       gamePhase.value = data.phase
     })
-
     socket.on('vote-cast', (data: { 
-      players: Player[]
-    }) => {
-      players.value = data.players
-    })
-
-    socket.on('game-reset', (data: {
-      players: Player[]
-    }) => {
-      gamePhase.value = 'waiting'
-      winner.value = null
-      word.value = ''
-      round.value = null
-      players.value = data.players
-      router.replace({ name: 'lobby', params: { roomCode: roomCode.value } })
-    })
-
-    socket.on('new-round', (data: {
       players: Player[],
+      votes: voteType,
+      phase: GamePhase,
       round: number,
-      phase: GamePhase
+      descriptions: descriptionType
     }) => {
       players.value = data.players
+      gamePhase.value = data.phase
+      votes.value = data.votes
+      descriptions.value = data.descriptions
       round.value = data.round
-      gamePhase.value = data.phase
     })
 
-    socket.on('vote-conflict', () => {
-      
+    socket.on('game-reset', (room) => {
+      updateGameInfo({room})
     })
 
-    socket.on('game-end', (data: {
-      players: Player[],
-      winner: PlayerType,
-      phase: GamePhase
-    }) => {
-      players.value = data.players
-      winner.value = data.winner
-      gamePhase.value = data.phase
+    socket.on('game-end', (room: GameRoom) => {
+      updateGameInfo({room})
     })
 
     socket.on('error', (data: { message: string }) => {
@@ -336,7 +330,6 @@ export const useGameStore = defineStore('game', () => {
     votes,
     descriptions,
     isUndercover,
-    gaming,
     
     // Getters
     isHost,

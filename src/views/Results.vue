@@ -1,39 +1,26 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed } from 'vue'
 import { useGameStore } from '../stores/gameStore'
+import { storeToRefs } from 'pinia'
 
-const route = useRoute()
-const router = useRouter()
 const gameStore = useGameStore()
+const {
+  winner,
+  isUndercover,
+  players,
+  currentPlayer,
+  isHost
+} = storeToRefs(gameStore)
 
-const roomCode = computed(() => route.params.roomCode as string)
-const winner = computed(() => gameStore.winner)
-const isUndercover = computed(() => gameStore.currentPlayer?.isUndercover)
-const undercoverPlayers = computed(() => gameStore.players.filter(p => p.isUndercover))
-const civilianPlayers = computed(() => gameStore.players.filter(p => !p.isUndercover))
-
-onMounted(() => {
-  // If we don't have a current player or game over state, go back to home
-  if (!gameStore.currentPlayer || !gameStore.winner) {
-    router.replace('/')
-    return
-  }
-  
-  // If roomCode from route doesn't match store, update store
-  if (gameStore.roomCode !== roomCode.value) {
-    gameStore.roomCode = roomCode.value
-  }
-})
+const undercoverPlayers = computed(() => players.value.filter(p => p.isUndercover))
+const civilianPlayers = computed(() => players.value.filter(p => !p.isUndercover))
 
 const startNewGame = () => {
   gameStore.resetGame()
-  router.replace({ name: 'lobby', params: { roomCode: roomCode.value } })
 }
 
 const leaveGame = () => {
   gameStore.leaveRoom()
-  router.replace('/')
 }
 </script>
 
@@ -58,10 +45,10 @@ const leaveGame = () => {
             <p v-if="isUndercover && winner === 'undercover'" class="text-lg text-accent-500 font-medium">
               Congratulations! You successfully tricked the civilians.
             </p>
-            <p v-else-if="isUndercover && winner === 'civilians'" class="text-lg text-gray-500 font-medium">
+            <p v-else-if="isUndercover && winner === 'civilian'" class="text-lg text-gray-500 font-medium">
               You were discovered! Better luck next time.
             </p>
-            <p v-else-if="!isUndercover && winner === 'civilians'" class="text-lg text-primary-500 font-medium">
+            <p v-else-if="!isUndercover && winner === 'civilian'" class="text-lg text-primary-500 font-medium">
               Congratulations! You successfully identified the undercover.
             </p>
             <p v-else class="text-lg text-gray-500 font-medium">
@@ -88,7 +75,7 @@ const leaveGame = () => {
                     <div class="font-medium">{{ undercoverPlayer.name }}</div>
                     <div class="text-sm text-accent-600 dark:text-accent-400">Word: {{ undercoverPlayer.word }}</div>
                   </div>
-                  <div v-if="undercoverPlayer.id === gameStore.currentPlayer?.id" class="ml-auto text-xs px-2 py-1 rounded-full bg-accent-200 text-accent-800">
+                  <div v-if="undercoverPlayer.id === currentPlayer?.id" class="ml-auto text-xs px-2 py-1 rounded-full bg-accent-200 text-accent-800">
                     You
                   </div>
                 </div>
@@ -112,7 +99,7 @@ const leaveGame = () => {
                     <div class="font-medium">{{ player.name }}</div>
                     <div class="text-sm text-primary-600 dark:text-primary-400">Word: {{ player.word }}</div>
                   </div>
-                  <div v-if="player.id === gameStore.currentPlayer?.id" class="ml-auto text-xs px-2 py-1 rounded-full bg-primary-200 text-primary-800">
+                  <div v-if="player.id === currentPlayer?.id" class="ml-auto text-xs px-2 py-1 rounded-full bg-primary-200 text-primary-800">
                     You
                   </div>
                 </div>
@@ -124,7 +111,7 @@ const leaveGame = () => {
         <!-- Action Buttons -->
         <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4">
           <button 
-            v-if="gameStore.isHost" 
+            v-if="isHost" 
             @click="startNewGame" 
             class="btn btn-primary"
           >

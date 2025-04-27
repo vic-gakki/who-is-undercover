@@ -1,7 +1,7 @@
 export type GamePhase = 'waiting' | 'description' | 'voting' | 'results'
 export type PlayerType = 'civilian' | 'undercover'
-export type descriptionType = Array<Record<string, string>>
-export type voteType = Array<Record<string, string>>
+export type descriptionType = Record<string, string>[]
+export type voteType = Record<string, string>[]
 export interface RoomSetting {
   mode: 'online' | 'offline';
   playerNumber: number;
@@ -13,21 +13,22 @@ export interface Player {
   name: string;
   isHost: boolean;
   socketId: string;
-  isUndercover?: boolean;
-  word?: string;
-  isEliminated?: boolean;
-  inTurn?: boolean;
+  isUndercover: boolean;
+  word: string;
+  isEliminated: boolean;
+  inTurn: boolean;
 }
 
 export interface GameRoom extends RoomSetting {
   code: string;
   players: Player[];
   phase: GamePhase;
-  civilianWord?: string;
-  undercoverWord?: string;
-  round?: number;
-  descriptions?: descriptionType
-  votes?: voteType
+  civilianWord: string;
+  undercoverWord: string;
+  round: number;
+  descriptions: descriptionType
+  votes: voteType
+  winner: string
 }
 
 export interface GameServiceResponse<T = {[key: string]: any}> {

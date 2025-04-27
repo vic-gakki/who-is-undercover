@@ -7,7 +7,8 @@ const {
   currentPlayer,
   canVote,
   activePlayers,
-  round
+  round,
+  votes
 } = storeToRefs(gameStore)
 const emit = defineEmits<{
   (e: 'submitVote', targetId: string): void
@@ -17,13 +18,13 @@ const selectedPlayer = ref<string | null>(null)
 const isLoading = ref(false)
 
 const hasVoted = computed(() => {
-  if (!currentPlayer.value) return false
-  return currentPlayer.value.votes?.[round.value ?? 0]
+  if (!currentPlayer.value || !round.value) return false
+  return votes.value[round.value][currentPlayer.value.id]
 })
 
 const myVote = computed(() => {
-  if (!currentPlayer.value || !hasVoted.value) return null
-  return currentPlayer.value.votes?.[round.value ?? 0]
+  if (!currentPlayer.value || !hasVoted.value || !round.value) return null
+  return votes.value[round.value][currentPlayer.value.id]
 })
 
 const submitVote = () => {
@@ -39,7 +40,7 @@ const submitVote = () => {
 }
 
 const votedPlayers = computed(() => {
-  return activePlayers.value.filter(player => player.votes?.[round.value ?? 0])
+  return Object.keys(votes.value[round.value!])
 })
 
 const isVoteComplete = computed(() => {
@@ -47,20 +48,16 @@ const isVoteComplete = computed(() => {
 })
 
 const voteResults = computed(() => {
-  return activePlayers.value.reduce((acc: Record<string, number>, cur) => {
-    const targetId = cur.votes?.[round.value ?? 0]!
-    if(targetId in acc){
-      acc[targetId]++
-    }else {
-      acc[targetId] = 1
-    }
-    return acc
+  return Object.values(votes.value[round.value!]).reduce((acc: Record<string, number>, cur) => {
+    acc[cur] = (acc[cur] || 0) + 1;
+    return acc;
   }, {})
 })
 
 const getVoteCount = (playerId: string) => {
   return voteResults.value[playerId] || 0
 }
+
 </script>
 
 <template>

@@ -1,45 +1,19 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { ref} from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import PlayerCard from '../components/PlayerCard.vue'
+import { storeToRefs } from 'pinia'
 
-const route = useRoute()
-const router = useRouter()
 const gameStore = useGameStore()
+const {
+  isHost,
+  roomCode,
+  players,
+  currentPlayer
+} = storeToRefs(gameStore)
 
 const isClipboardCopied = ref(false)
 const showRules = ref(false)
-
-const roomCode = computed(() => route.params.roomCode as string)
-const isHost = computed(() => gameStore.isHost)
-const players = computed(() => gameStore.players)
-
-onMounted(() => {
-  // If we don't have a current player, go back to home
-  if (!gameStore.currentPlayer) {
-    router.replace('/')
-    return
-  }
-  
-  // If roomCode from route doesn't match store, update store
-  if (gameStore.roomCode !== roomCode.value) {
-    gameStore.roomCode = roomCode.value
-  }
-  
-  // Listen for game phase changes
-  const unsubscribe = gameStore.$subscribe((_, state) => {
-    if (state.gamePhase === 'description') {
-      // Game started, redirect to game view
-      router.replace({ name: 'game', params: { roomCode: roomCode.value } })
-    }
-  })
-  
-  // Clean up subscription
-  onBeforeUnmount(() => {
-    unsubscribe()
-  })
-})
 
 const copyRoomCode = () => {
   navigator.clipboard.writeText(roomCode.value)
@@ -60,7 +34,6 @@ const toggleRules = () => {
 
 const leaveRoom = () => {
   gameStore.leaveRoom()
-  router.replace('/')
 }
 </script>
 
@@ -97,7 +70,7 @@ const leaveRoom = () => {
               v-for="player in players" 
               :key="player.id" 
               :player="player"
-              :is-current="player.id === gameStore.currentPlayer?.id"
+              :is-current="player.id === currentPlayer?.id"
             />
           </div>
           
