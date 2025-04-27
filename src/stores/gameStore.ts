@@ -4,48 +4,38 @@ import { v4 as uuidv4 } from 'uuid'
 import { socket, isConnected, connectionError } from '../services/socketService'
 import socketService from '../services/socketService'
 import { useRouter } from 'vue-router'
-const ERROR_TIMEOUT = 1500
-
-export type Player = {
-  id: string
-  name: string
-  isHost: boolean
-  isUndercover?: boolean
-  isEliminated?: boolean
-  word?: string
-  inTurn?: boolean;
-  descriptions?: string[];
-  votes?: string[];
-}
-
-export type GamePhase = 'waiting' | 'description' | 'voting' | 'results'
-export type PlayerType = 'civilians' | 'undercover'
+import type {Player, GamePhase, descriptionType, voteType, PlayerType, GameRoom} from '../../server/src/type'
 interface GameSession {
-  playerId: string
-  playerName: string
   roomCode: string
-  isHost: boolean
+  player: Pick<Player, 'id' | 'name' | 'isHost'>
 }
+
+const ERROR_TIMEOUT = 1500
 
 export const useGameStore = defineStore('game', () => {
   const router = useRouter()
   // State
   const roomCode = ref<string>('')
   const players = ref<Player[]>([])
-  const currentPlayer = ref<Player | null>(null)
-  const gamePhase = ref<GamePhase>('waiting')
-  const winner = ref<PlayerType | null>(null)
-  const word = ref<string>('')
+  const gamePhase = ref<GamePhase | null>(null)
+  const gaming = ref(false)
+  const winner = ref()
+  const word = ref('')
+  const isUndercover = ref(false)
   const error = ref<string | null>(null)
   const isInitialized = ref(false)
-  const round = ref<number | null>(0)
+  const round = ref(0)
+  const votes = ref<voteType>([])
+  const descriptions = ref<descriptionType>([])
+  const currentPlayerId = ref('')
 
   // Getters
+  const currentPlayer = computed(() => players.value.find(player => player.id === currentPlayerId.value))
   const isHost = computed(() => currentPlayer.value?.isHost || false)
   const activePlayers = computed(() => players.value.filter(p => !p.isEliminated))
   const currentTurnPlayer = computed(() => players.value.find(player => player.inTurn))
-  const canVote = computed(() => 
-    gamePhase.value === 'voting' && !currentPlayer.value?.votes?.[round.value ?? 0]
+  const canVote = computed(() =>
+    currentPlayer.value && gaming.value && gamePhase.value === 'voting' && !descriptions.value[round.value][currentPlayer.value.id]
   )
   const gameOver = computed(() => {
     if (!winner.value) return false
@@ -57,11 +47,14 @@ export const useGameStore = defineStore('game', () => {
   // Session Management
   function saveSession() {
     if (currentPlayer.value && roomCode.value) {
+      const {id, name, isHost} = currentPlayer.value
       const session: GameSession = {
-        playerId: currentPlayer.value.id,
-        playerName: currentPlayer.value.name,
+        player: {
+          id,
+          name,
+          isHost
+        },
         roomCode: roomCode.value,
-        isHost: currentPlayer.value.isHost
       }
       localStorage.setItem('gameSession', JSON.stringify(session))
     }
@@ -90,11 +83,6 @@ export const useGameStore = defineStore('game', () => {
     }
   })
 
-
-  watch(players, () => {
-    currentPlayer.value = players.value.find(player => player.id === currentPlayer.value?.id) ?? null
-  })
-
   // Actions
   function initializeSocketConnection() {
     if (!isInitialized.value) {
@@ -105,24 +93,24 @@ export const useGameStore = defineStore('game', () => {
       // Try to restore session
       const session = loadSession()
       if (session) {
-        currentPlayer.value = {
-          id: session.playerId,
-          name: session.playerName,
-          isHost: session.isHost
-        }
-        roomCode.value = session.roomCode
-
         // Rejoin room
-        socket.emit('rejoin-room', {
-          roomCode: session.roomCode,
-          player: currentPlayer.value
-        }, (room:any) => {
-          if(room.errorCode){
-            showError(room.error)
+        socket.emit('rejoin-room', session, (res:any) => {
+          const {data} = res
+          if(!res.success){
+            showError(res.msg)
             router.replace('/')
             clearSession()
-          }else if(room) {
-            router.replace({ name: 'game', params: { roomCode: roomCode.value } })
+          }else {
+            const {room, player} = data as {room: GameRoom, player: Player}
+            gamePhase.value = room.phase
+            round.value = room.round!
+            players.value = room.players
+            word.value = player.word!
+            isUndercover.value = player.isUndercover!
+            descriptions.value = room.descriptions!
+            votes.value = room.votes!
+            roomCode.value = room.code
+            currentPlayerId.value = player.id
           }
         })
       }
@@ -137,11 +125,13 @@ export const useGameStore = defineStore('game', () => {
     const playerId = uuidv4()
     const newRoomCode = generateRoomCode()
     
-    currentPlayer.value = {
+    const player = {
       id: playerId,
       name: playerName,
       isHost: true
     }
+
+    currentPlayerId.value = playerId
     
     roomCode.value = newRoomCode
     
@@ -151,7 +141,7 @@ export const useGameStore = defineStore('game', () => {
         password,
         mode: isOnline ? 'online' : 'offline'
       },
-      player: currentPlayer.value
+      player
     })
     
     return newRoomCode
@@ -169,19 +159,21 @@ export const useGameStore = defineStore('game', () => {
       name: playerName,
       isHost: false
     }
+
+    currentPlayerId.value = playerId
     
     socket.emit('join-room', {
       roomCode: newRoomCode,
       player,
       password
     }, (res: Record<string ,string>) => {
-      if(res?.error){
-        showError(res.error)
+      if(!res.success){
+        showError(res.msg)
         return
       }
-      roomCode.value = newRoomCode
-      currentPlayer.value = player
-      router.push({ name: 'lobby', params: { roomCode: newRoomCode } })
+      
+      // roomCode.value = newRoomCode
+      // router.push({ name: 'lobby', params: { roomCode: newRoomCode } })
     })
   }
 
@@ -232,11 +224,13 @@ export const useGameStore = defineStore('game', () => {
     clearSession()
     roomCode.value = ''
     players.value = []
-    currentPlayer.value = null
-    gamePhase.value = 'waiting'
+    gamePhase.value = ''
     winner.value = null
     word.value = ''
+    isUndercover.value = false
     round.value = null
+    descriptions.value = []
+    votes.value = []
   }
 
   // Helper functions
@@ -339,6 +333,10 @@ export const useGameStore = defineStore('game', () => {
     word,
     error,
     round,
+    votes,
+    descriptions,
+    isUndercover,
+    gaming,
     
     // Getters
     isHost,

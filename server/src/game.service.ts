@@ -1,68 +1,61 @@
 import { Injectable } from '@nestjs/common';
-import { Socket } from 'socket.io';
+import type {Player, GameRoom, RoomSetting, GameServiceResponse} from './type'
+import { ErrorMessage, OperateionMessage } from './constant';
 
-export type GamePhase = 'waiting' | 'description' | 'voting' | 'results'
-export type PlayerType = 'civilians' | 'undercover'
-
-export interface RoomSetting {
-  mode: 'online' | 'offline';
-  password?: string;
+const generateErrorResponse = (errorMessage: string): GameServiceResponse => {
+  return {
+    success: false,
+    msg: errorMessage,
+    data: null
+  }
 }
-export interface Player {
-  id: string;
-  name: string;
-  isHost: boolean;
-  socketId: string;
-  isUndercover?: boolean;
-  word?: string;
-  isEliminated?: boolean;
-  inTurn?: boolean;
-  descriptions?: string[];
-  votes?: string[];
+const genereateSuccessResponse = <T = {[key: string]: any}>(msg: string = 'ok', data: T): GameServiceResponse<T> => {
+  return {
+    success: true,
+    msg,
+    data
+  }
 }
-
-export interface GameRoom extends RoomSetting {
-  code: string;
-  players: Player[];
-  phase: GamePhase;
-  civilianWord?: string;
-  civilNumber?: number;
-  undercoverNumber?: number;
-  undercoverWord?: string;
-  round: number;
-  winner?: PlayerType
-}
-
 @Injectable()
 export class GameService {
   private rooms: Map<string, GameRoom> = new Map();
 
-  createRoom(roomCode: string, player: Player, settings: RoomSetting): GameRoom {
+  createRoom(roomCode: string, player: Player, settings: RoomSetting) {
     const room: GameRoom = {
       code: roomCode,
       players: [player],
       phase: 'waiting',
-      round: 0,
       ...settings
     };
     
     this.rooms.set(roomCode, room); 
-    return room;
+    return genereateSuccessResponse(OperateionMessage.ROOM_CREATED, {room})
   }
 
-  joinRoom(roomCode: string, player: Player, password: string): GameRoom | null | Error {
+  joinRoom(roomCode: string, player: Player, password: string) {
     const room = this.rooms.get(roomCode);
-    if (!room) return null;
-    if (room.password && room.password !== password) return new Error('Invalid password');
+    if (!room) {
+      return generateErrorResponse(ErrorMessage.ROOM_NOT_FOUND);
+    }
+    if(room.players.length >= room.playerNumber){
+      return generateErrorResponse(ErrorMessage.ROOM_FULL);
+    }
+    if (room.password && room.password !== password) {
+      return generateErrorResponse(ErrorMessage.INVALID_PASSWORD);
+    }
+    if(room.phase !== 'waiting'){
+      return generateErrorResponse(ErrorMessage.GAME_ALREADY_STARTED);
+    }
     room.players.push(player);
-    return room;
+    return genereateSuccessResponse(OperateionMessage.PLAYER_JOINED, {room})
   }
 
-  rejoinRoom(roomCode: string, player: Player): GameRoom | null {
+  rejoinRoom(roomCode: string, player: Player) {
     const room = this.rooms.get(roomCode);
-    if (!room) return null;
+    if (!room) {
+      return generateErrorResponse(ErrorMessage.ROOM_NOT_FOUND);
+    }
 
-    // Update the player's socket ID if they already exist in the room
     const existingPlayerIndex = room.players.findIndex(p => p.id === player.id);
     if (existingPlayerIndex !== -1) {
       room.players[existingPlayerIndex] = {
@@ -70,17 +63,21 @@ export class GameService {
         socketId: player.socketId,
       };
     } else {
-      // If player doesn't exist (rare case), add them
-      room.players.push(player);
+      return generateErrorResponse(ErrorMessage.UNKNOEN_ERROR);
     }
-
-    return room;
+    const {word, isUndercover} = room.players[existingPlayerIndex]
+    return genereateSuccessResponse(OperateionMessage.PLAYER_REJOINED, {room, word, isUndercover});
   }
 
-  leaveRoom(roomCode: string, playerId: string): GameRoom | null {
+
+  // PLAYER_LEFT | GAME_ENDED | DESCRIPTION_SUBMITTED | VOTE_CASTED
+  leaveRoom(roomCode: string, playerId: string) {
     const room = this.rooms.get(roomCode);
-    if (!room) return;
-    
+    if (!room) {
+      return generateErrorResponse(ErrorMessage.ROOM_NOT_FOUND);
+    }
+
+    const leavedPlayer = room.players.find(player => player.id === playerId);
     room.players = room.players.filter(p => p.id !== playerId);
     
     if (room.players.length === 0) {
@@ -88,34 +85,48 @@ export class GameService {
     } else if (room.players.length > 0 && room.players[0].isHost === false) {
       room.players[0].isHost = true;
     }
-    return room
+
+    if(!leavedPlayer.isEliminated){
+      return this.updateGameStatus(roomCode, leavedPlayer)
+    }
+    return genereateSuccessResponse(OperateionMessage.PLAYER_LEFT, {
+      room,
+      playerId
+    })
   }
 
-  getRoom(roomCode: string): GameRoom | null {
-    return this.rooms.get(roomCode) || null;
+  shufflePlayers<T>(players: T[]): T[] {
+    players = [...players]
+    players.sort(() => Math.random() - 0.5);
+    return players
   }
 
-  startGame(roomCode: string): GameRoom | null {
+  startGame(roomCode: string) {
     const room = this.rooms.get(roomCode);
-    if (!room) return null;
+    if (!room) {
+      return generateErrorResponse(ErrorMessage.ROOM_NOT_FOUND);
+    }
     
-    const words = this.getWordPair();
-    const undercoverIndex = Math.floor(Math.random() * room.players.length);
-    
-    room.civilianWord = words.civilian;
-    room.undercoverWord = words.undercover;
-    
-    room.players = room.players.map((player, index) => ({
-      ...player,
-      isUndercover: index === undercoverIndex,
-      word: index === undercoverIndex ? words.undercover : words.civilian,
-      isEliminated: false,
-      inTurn: index === 0
-    }));
-    
+    const {civilian, undercover} = this.getWordPair();
+    const players = this.shufflePlayers(room.players)
+    const underCoverIds = players.slice(0, room.undercoverNumber).map(player => player.id)
+    room.civilianWord = civilian;
+    room.undercoverWord = undercover;
     room.phase = 'description';
-    
-    return room;
+    room.round = 0;
+    room.descriptions = []
+    room.votes = []
+    room.players = room.players.map((player, index) => {
+      const isUndercover = underCoverIds.includes(player.id);
+      return {
+        ...player,
+        isUndercover,
+        word: isUndercover ? undercover : civilian,
+        isEliminated: false,
+        inTurn: index === 0
+      }
+    });
+    return genereateSuccessResponse(OperateionMessage.GAME_STARTED, {room});
   }
 
   private getWordPair(): { civilian: string; undercover: string } {
@@ -130,124 +141,157 @@ export class GameService {
     return wordPairs[Math.floor(Math.random() * wordPairs.length)];
   }
 
-  submitDescription(roomCode: string, playerId: string, description: string): {room: GameRoom, roundEnd: boolean} | null {
+  submitDescription(roomCode: string, playerId: string, description: string) {
     const room = this.rooms.get(roomCode);
-    if (!room) return null;
-    const activePlayers = this.getActivePlayers(roomCode)
-    const playerIndex = activePlayers.findIndex(player => player.id === playerId)
-    const roundEnd = playerIndex === activePlayers.length - 1
-    const currentPlayer = activePlayers[playerIndex]
-    if(currentPlayer){
-      if(!currentPlayer.descriptions){
-        currentPlayer.descriptions = []
-      }
-      currentPlayer.descriptions[room.round] = description
+    if (!room) {
+      return generateErrorResponse(ErrorMessage.ROOM_NOT_FOUND);
     }
-    currentPlayer.inTurn = false
-
-    if(!roundEnd){
-      room.players[playerIndex + 1].inTurn = true
-    }
-    
-    return {
-      room,
-      roundEnd
-    }
+    const roundDescriptions = room.descriptions[room.round] || (room.descriptions[room.round] = {})
+    roundDescriptions[playerId] = description
+    this.updateGameStatus(roomCode)
   }
 
-  getActivePlayers(roomCode: string): Player[] | null {
+  getActivePlayers(roomCode: string): Player[] {
     const room = this.rooms.get(roomCode);
-    if (!room) return [];
-    
     return room.players.filter(player => !player.isEliminated);
   }
 
-  castVote(roomCode: string, voterId: string, targetId: string): {room: GameRoom, voteDone: boolean, gameOver: boolean, voteConflict: boolean, winner: string} | null {
-    const room = this.rooms.get(roomCode);
-    if (!room) return null;
-    const voter = room.players.find(player => player.id === voterId)
-    if(!voter.votes){
-      voter.votes = []
-    }
-    voter.votes[room.round] = targetId
-    let activePlayers = this.getActivePlayers(roomCode)
-    const voteDone = activePlayers.every(player => !!player.votes?.[room.round])
-    let gameOver = false
-    let voteConflict = false
-    let winner
-    if(voteDone){
-      const res = activePlayers.reduce((acc: Record<string, number>, cur) => {
-        const id = cur.votes[room.round]
-        if(id in acc){
-          acc[id]++
-        }else {
-          acc[id] = 1
-        }
-        return acc
-      }, {})
-      const votes = Object.values(res)
-      votes.sort()
-      const maxVotes = votes.pop()
-      const snd = votes.pop()
-      let maxVotesId
-      let maxVotePlayer
-      if(maxVotes === snd) {
-        // share same vote
-        voteConflict = true
-      }else {
-        for(let key in res){
-          if(res[key] === maxVotes){
-            maxVotesId = key
-          }
-        }
-      }
-      if(maxVotesId){
-        maxVotePlayer = room.players.find(player => player.id === maxVotesId)
-        maxVotePlayer.isEliminated = true
-        activePlayers = this.getActivePlayers(roomCode)
-      }
-      const undercoverNum = activePlayers.filter(player => player.isUndercover).length
-      const civilNum = activePlayers.filter(player => !player.isUndercover).length
-      if(undercoverNum === 0){
-        gameOver = true
-        winner = 'civil'
-      }else if(undercoverNum >= civilNum){
-        gameOver = true
-        winner = 'undercover'
-      }
-    }
-    if(gameOver){
-      room.winner = winner
-    }
-    return {
-      room,
-      voteDone,
-      gameOver,
-      voteConflict,
-      winner
-    };
+  getVoteResults(votes: Record<string, string>): Record<string, number> {
+    return Object.values(votes).reduce((acc, cur) => {
+      acc[cur] = (acc[cur] || 0) + 1;
+      return acc;
+    }, {})
   }
-  resetGame(roomCode: string){
+
+  castVote(roomCode: string, voterId: string, targetId: string) {
     const room = this.rooms.get(roomCode);
-    if (!room) return null;
-    room.civilNumber = 0
-    room.civilianWord = undefined
-    room.undercoverNumber = 0
-    room.undercoverWord = undefined
-    room.round = null
-    room.phase = 'waiting'
-    room.winner = undefined
-    room.players = room.players.map(player => {
+    if (!room) {
+      return generateErrorResponse(ErrorMessage.ROOM_NOT_FOUND);
+    }
+    const roundVotes = room.votes[room.round] || (room.votes[room.round] = {})
+    roundVotes[voterId] = targetId
+    return this.updateGameStatus(roomCode)
+  }
+  resetGame(roomCode: string) {
+    const room = this.rooms.get(roomCode);
+    if (!room) {
+      return generateErrorResponse(ErrorMessage.ROOM_NOT_FOUND);
+    }
+    room.civilianWord = undefined;
+    room.undercoverWord = undefined;
+    room.phase = 'waiting';
+    room.round = undefined;
+    room.descriptions = []
+    room.votes = []
+    room.players = room.players.map((player) => {
       return {
         ...player,
         isUndercover: undefined,
         word: undefined,
         isEliminated: undefined,
-        inTurn: undefined,
-        descriptions: undefined,
-        votes: undefined
+        inTurn: undefined
+      }
+    });
+    return genereateSuccessResponse(OperateionMessage.GAME_RESTARTED, {room})
+  }
+  
+  // GAME_ENDED | DESCRIPTION_SUBMITTED | VOTE_CASTED
+  updateGameStatus(roomCode: string, leavedPlayer?: Player){
+    const res = this.isGameOver(roomCode)
+    if(res){
+      return res
+    }
+    const room = this.rooms.get(roomCode);
+    const activePlayers = this.getActivePlayers(roomCode)
+    const activePlayerIds = activePlayers.map(player => player.id)
+    if(room.phase === 'description'){
+      const roundDescriptions = room.descriptions[room.round]
+      const submittedDescriptonIds = Object.keys(roundDescriptions).filter(playerId => activePlayerIds.includes(playerId))
+      const nextTurnPlayer = activePlayers.filter(player => !submittedDescriptonIds.includes(player.id))?.[0]
+      activePlayers.forEach(player => player.inTurn = false)
+      if(nextTurnPlayer){
+        nextTurnPlayer.inTurn = true
+      }
+      const roundEnd = !!nextTurnPlayer
+      if(roundEnd){
+        room.phase = 'voting'
+      }
+      return genereateSuccessResponse(OperateionMessage.DESCRIPTION_SUBMITTED, {
+        roundEnd,
+        room
+      })
+    }else if(room.phase === 'voting'){
+      let roundVotes = room.votes[room.round]
+      for(let key in roundVotes){
+        if(roundVotes[key] === leavedPlayer?.id){
+          delete roundVotes[key]
+        }
+      }
+      const catedVoteIds = Object.keys(roundVotes).filter(voteId => activePlayerIds.includes(voteId))
+      const voteDone = catedVoteIds.length === activePlayers.length
+      if(voteDone){
+        const votes = this.getVoteResults(roundVotes)
+        const maxVoteCount = Math.max(...Object.values(votes))
+        const maxVotedPlayers = activePlayers.filter(player => votes[player.id] === maxVoteCount)
+        if(maxVotedPlayers.length > 1){
+          return genereateSuccessResponse(OperateionMessage.VOTE_CASTED, {
+            room,
+            tie: maxVotedPlayers.map(player => player.id),
+            maxVoteCount,
+            voteDone
+          })
+        }
+        maxVotedPlayers.forEach(player => player.isEliminated = true)
+        const isGameOver = this.isGameOver(roomCode)
+        if(isGameOver) {
+          return res
+        }
+        room.phase = 'description'
+        room.round++
+      }
+      return genereateSuccessResponse(OperateionMessage.VOTE_CASTED, {
+        room,
+        voteDone
+      }) 
+    }
+  }
+  isGameOver(roomCode: string) {
+    const room = this.rooms.get(roomCode);
+    const activePlayers = this.getActivePlayers(roomCode)
+    const undercoverNum = activePlayers.filter(player => player.isUndercover).length
+    const civilNum = activePlayers.filter(player => !player.isUndercover).length
+    if(undercoverNum === 0) {
+      room.phase = 'results'
+      return genereateSuccessResponse(OperateionMessage.GAME_ENDED, {
+        room,
+        winner: 'civil'
+      })
+    }else if (undercoverNum === civilNum) {
+      room.phase = 'results'
+      return genereateSuccessResponse(OperateionMessage.GAME_ENDED, {
+        room,
+        winner: 'undercover'
+      })
+    }
+  }
+
+  maskPlayerInfo(players: Player[], playerId?: string){
+    return players.map(p => {
+      const {socketId, ...res} = p
+      return {
+        ...res,
+        isUndercover: p.id === playerId ? p.isUndercover : undefined,
+        word: p.id === playerId ? p.word : undefined,
       }
     })
-    return room
+  }
+
+  maskRoomInfo(room: GameRoom, playerId?: string){
+    return {
+      ...room,
+      players: this.maskPlayerInfo(room.players, playerId),
+      civilianWord: undefined,
+      undercoverWord: undefined,
+    }
   }
 }

@@ -7,9 +7,8 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
-import type { Player } from './game.service';
-import type { RoomSetting } from './game.service';
-import { ErrorCode, ErrorMessage } from './constant';
+import type { GameRoom, Player, RoomSetting } from './type';
+import { ErrorMessage, OperateionMessage } from './constant';
 @WebSocketGateway({
   cors: {
     origin: ['http://localhost:5173'],
@@ -33,102 +32,93 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('create-room')
   handleCreateRoom(client: Socket, payload: { roomCode: string, player: Player, settings: RoomSetting}) {
     const player = { ...payload.player, socketId: client.id };
-    const room = this.gameService.createRoom(payload.roomCode, player, payload.settings);
+    const {
+      data
+    } = this.gameService.createRoom(payload.roomCode, player, payload.settings);
     
     client.join(payload.roomCode);
-    this.server.to(payload.roomCode).emit('room-joined', { players: room.players });
+    this.server.to(payload.roomCode).emit('room-joined', { players: this.gameService.maskPlayerInfo(data.room.players, player.id) });
   }
 
   @SubscribeMessage('join-room')
   handleJoinRoom(client: Socket, payload: { roomCode: string; player: Player; password?: string }) {
     const player = { ...payload.player, socketId: client.id };
-    const room = this.gameService.joinRoom(payload.roomCode, player, payload.password);
-    if(room instanceof Error) {
-      return {
-        errorCode: ErrorCode.INVALID_PASSWORD,
-        error: ErrorMessage.INVALID_PASSWORD,
-      }
+    const res = this.gameService.joinRoom(payload.roomCode, player, payload.password);
+    const {room} = res.data as {room: GameRoom}
+    if(!res.success) {
+      return res
     }
-    if (room) {
-      client.join(payload.roomCode);
-      this.server.to(payload.roomCode).emit('room-joined', { players: room.players });
-      return room
-    } else {
-      return {
-        errorCode: ErrorCode.ROOM_NOT_FOUND,
-        error: ErrorMessage.ROOM_NOT_FOUND,
+    client.join(payload.roomCode);
+    this.server.to(payload.roomCode).emit('room-joined', { players: this.gameService.maskPlayerInfo(room.players, player.id) });
+  }
+
+  emitGameStatusUpdate(res){
+    if(res.success){
+      let { room, tie, maxVoteCount, winner, playerId } = res.data as {room: GameRoom, [key:string]: any}
+      const roomCode = room.code
+      switch (res.msg) {
+        case OperateionMessage.PLAYER_LEFT:
+          this.server.to(room.code).emit('player-left', playerId);
+          break;
+        case OperateionMessage.GAME_ENDED:
+          this.server.to(roomCode).emit('game-end', {
+            room,
+            winner
+          });
+          break;
+        case OperateionMessage.DESCRIPTION_SUBMITTED:
+          this.server.to(roomCode).emit('description-submitted', {
+            descriptions: room.descriptions,
+            phase: room.phase,
+            players: this.gameService.maskPlayerInfo(room.players)
+          });
+          break;
+        case OperateionMessage.VOTE_CASTED:
+          this.server.to(roomCode).emit('vote-cast', {
+            votes: room.votes,
+            phase: room.phase,
+            round: room.round,
+            tie: tie,
+            maxVotes: maxVoteCount,
+            players: this.gameService.maskPlayerInfo(room.players)
+          });
+          break;
+        default:
+          break;
       }
     }
   }
 
   @SubscribeMessage('leave-room')
   handleLeaveRoom(client: Socket, payload: { roomCode: string; playerId: string }) {
-    const room = this.gameService.leaveRoom(payload.roomCode, payload.playerId);
-    if (room) {
-      client.leave(payload.roomCode);
-      this.server.to(payload.roomCode).emit('player-left', {
-        playerId: payload.playerId,
-        players: room.players
-      });
-    }
+    const res = this.gameService.leaveRoom(payload.roomCode, payload.playerId);
+    this.emitGameStatusUpdate(res)
   }
 
   @SubscribeMessage('rejoin-room')
   handleRejoinRoom(client: Socket, payload: { roomCode: string; player: any }) {
     const player = { ...payload.player, socketId: client.id };
-    const room = this.gameService.rejoinRoom(payload.roomCode, player);
-    
-    if (room) {
-      client.join(payload.roomCode);
-      this.server.to(payload.roomCode).emit('room-joined', { players: room.players });
-      
-      // If game is in progress, send current game state
-      if (room.phase !== 'waiting') {
-        const playerData = room.players.find(p => p.id === player.id);
-        if (playerData) {
-          client.emit('game-started', {
-            players: room.players.map(p => {
-              const {socketId, ...res} = p
-              return {
-                ...res,
-                isUndercover: p.id === player.id ? p.isUndercover : undefined,
-                word: p.id === player.id ? p.word : undefined,
-              }
-            }),
-            word: playerData.word,
-            phase: room.phase,
-            round: room.round
-          });
-        }
-      }
+    const res = this.gameService.rejoinRoom(payload.roomCode, player);
+    if(!res.success){
+      return res
     }
-    return room ?? {
-      errorCode: ErrorCode.ROOM_NOT_FOUND, 
-      error: ErrorMessage.ROOM_NOT_FOUND,
-    }
+    res.data.room = this.gameService.maskRoomInfo(res.data.room, player.id)
+    return res
   }
 
   @SubscribeMessage('start-game')
   handleStartGame(client: Socket, payload: { roomCode: string }) {
-    const room = this.gameService.startGame(payload.roomCode);
-    
-    if (room) {
-      room.phase = 'description';
-      room.players.forEach(player => {
-        this.server.to(player.socketId).emit('game-started', {
-          players: room.players.map(p => {
-            const {socketId, ...res} = p
-            return {
-              ...res,
-              isUndercover: p.id === player.id ? p.isUndercover : undefined,
-              word: p.id === player.id ? p.word : undefined,
-            }
-          }),
-          word: player.word,
-          phase: room.phase
-        });
-      });
+    const res = this.gameService.startGame(payload.roomCode);
+    if(!res.success){
+      return res
     }
+    const {data} = res as {data: {room: GameRoom, [key:string]: any}}
+    data.room.players.forEach(player => {
+      this.server.to(player.socketId).emit('game-started', {
+        players: this.gameService.maskPlayerInfo(data.room.players, player.id),
+        word: player.word,
+      });
+    });
   }
 
   @SubscribeMessage('submit-description')
@@ -139,60 +129,20 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       payload.description
     );
     
-    if (res) {
-      // Broadcast the new description to all players
-      const {room, roundEnd} = res
-      this.server.to(payload.roomCode).emit('description-submitted', {
-        players: room.players,
-      });
-
-      // Move to next turn or voting phase if all descriptions are in
-      if (roundEnd) {
-        room.phase = 'voting';
-        this.server.to(payload.roomCode).emit('phase-changed', { phase: room.phase });
-      }
-    }
+    this.emitGameStatusUpdate(res)
   }
   @SubscribeMessage('cast-vote')
   handleCastVote(client: Socket, payload: { roomCode: string; voterId: string; targetId: string }) {
     const res = this.gameService.castVote(payload.roomCode, payload.voterId, payload.targetId);
-    if (res) {
-      const {room, voteDone, gameOver, voteConflict, winner} = res
-      this.server.to(payload.roomCode).emit('vote-cast', {
-        players: room.players,
-      });
-      if (voteDone) {
-        if(gameOver){
-          room.phase = 'results';
-          this.server.to(payload.roomCode).timeout(3000).emit('game-end', {
-            players: room.players,
-            winner,
-            phase: room.phase
-          })
-        }else if(voteConflict) {
-          this.server.to(payload.roomCode).timeout(3000).emit('vote-conflict', {
-            players: room.players,
-          })
-        }else {
-          room.phase = 'description';
-          room.round++
-          this.server.to(payload.roomCode).timeout(3000).emit('new-round', {
-            players: room.players,
-            round: room.round,
-            phase: room.phase
-          })
-        }
-      }
-    }
+    this.emitGameStatusUpdate(res)
   }
   @SubscribeMessage('reset-game')
   handleResetGame(client: Socket, roomCode: string) {
-    const room = this.gameService.resetGame(roomCode);
-    if (room) {
-      this.server.to(roomCode).timeout(3000).emit('game-reset', {
-        players: room.players,
-        round: room.round,
-        phase: room.phase
+    const res = this.gameService.resetGame(roomCode);
+    if (res.success) {
+      const {room} = res.data as {room: GameRoom}
+      this.server.to(roomCode).emit('game-reset', {
+        ...room
       })
     }
   }

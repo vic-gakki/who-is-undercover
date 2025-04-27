@@ -89,7 +89,7 @@ const joinRoom = async () => {
 </script>
 
 <template>
-  <div class="page-container h-screen flex items-center justify-center">
+  <div class="page-container h-full flex items-center justify-center">
     <div class="w-full max-w-md">
       <div class="card animate-fade-in">
         <h1 class="text-center text-3xl font-bold mb-8">Who Is the Undercover?</h1>
