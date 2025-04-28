@@ -132,7 +132,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('cast-vote')
   handleCastVote(client: Socket, payload: { roomCode: string; voterId: string; targetId: string }) {
     const res = this.gameService.castVote(payload.roomCode, payload.voterId, payload.targetId);
-    console.log({res})
     this.emitGameStatusUpdate(res)
   }
   @SubscribeMessage('reset-game')
