@@ -33,6 +33,7 @@ export const useGameStore = defineStore('game', () => {
   const descriptions = ref<descriptionType>([])
   const civilianWord = ref('')
   const undercoverWord = ref('')
+  const roomMode = ref('offline')
   const currentPlayerId = ref('')
 
   // Getters
@@ -42,8 +43,9 @@ export const useGameStore = defineStore('game', () => {
   const currentTurnPlayer = computed(() => players.value.find(player => player.inTurn))
   const roundDescriptions = computed(() => isNil(round.value) ? {} : descriptions.value[round.value] ?? {})
   const roundVotes = computed(() => isNil(round.value) ? {} : votes.value[round.value] ?? {})
+  const isOfflineRoom = computed(() => roomMode.value === 'offline')
   const canVote = computed(() =>
-    currentPlayer.value && gamePhase.value === 'voting' && !roundVotes.value[currentPlayer.value.id]
+    currentPlayer.value && (gamePhase.value === 'voting' && !roundVotes.value[currentPlayer.value.id] || isOfflineRoom.value)
   )
   const gameOver = computed(() => {
     if (!winner.value) return false
@@ -210,6 +212,11 @@ export const useGameStore = defineStore('game', () => {
       roomCode: roomCode.value,
       playerId: currentPlayer.value.id,
       description
+    }, (res: Record<string ,string>) => {
+      if(!res.success){
+        showError(res.msg)
+        return
+      }
     })
   }
 
@@ -220,6 +227,11 @@ export const useGameStore = defineStore('game', () => {
       roomCode: roomCode.value,
       voterId: currentPlayer.value.id,
       targetId: targetPlayerId
+    }, (res: Record<string ,string>) => {
+      if(!res.success){
+        showError(res.msg)
+        return
+      }
     })
   }
 
@@ -250,8 +262,10 @@ export const useGameStore = defineStore('game', () => {
   function updateGameInfo({exit = false, room}: UpdateOptions = {exit: false}){
     exit && (roomCode.value = '')
     exit && (currentPlayerId.value = '')
+    exit && (roomMode.value = '')
     !room && (word.value = '')
     !room && (isUndercover.value = false)
+    roomMode.value = room?.mode ?? ''
     players.value = exit ? [] : room!.players
     gamePhase.value = exit ? null : room!.phase
     round.value = exit ? null : room!.round
@@ -333,6 +347,7 @@ export const useGameStore = defineStore('game', () => {
     votes,
     descriptions,
     isUndercover,
+    roomMode,
     
     // Getters
     isHost,
@@ -343,6 +358,7 @@ export const useGameStore = defineStore('game', () => {
     socketError,
     roundVotes,
     roundDescriptions,
+    isOfflineRoom,
     
     // Actions
     initializeSocketConnection,

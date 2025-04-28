@@ -13,7 +13,9 @@ const {
   isUndercover,
   gamePhase,
   activePlayers,
-  players
+  currentPlayer,
+  players,
+  roomMode
 } = storeToRefs(gameStore)
 
 const showWordModal = ref(true)
@@ -34,6 +36,12 @@ const confirmLeave = () => {
 
 const cancelLeave = () => {
   showLeaveConfirm.value = false
+}
+
+const showVoteModal = ref(false)
+
+const toggleVoteModal = (bool: boolean) => {
+  showVoteModal.value = bool
 }
 </script>
 
@@ -83,6 +91,15 @@ const cancelLeave = () => {
             </div>
           </div>
         </div>
+
+        <div class="flex justify-center" v-if="roomMode === 'offline'">
+          <button 
+            @click="showVoteModal = true" 
+            class="btn btn-primary opacity-70"
+          >
+            <span>Vote</span>
+          </button>
+        </div>
         
         <!-- Description Phase -->
         <DescriptionPhase
@@ -91,7 +108,7 @@ const cancelLeave = () => {
         
         <!-- Voting Phase -->
         <VotingPhase
-          v-if="gamePhase === 'voting'"
+          v-if="((roomMode === 'online' && gamePhase === 'voting') || showVoteModal) && !currentPlayer?.isEliminated"
           @submit-vote="gameStore.submitVote"
         />
         

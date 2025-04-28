@@ -11,7 +11,7 @@ import type { GameRoom, Player, RoomSetting } from './type';
 import { ErrorMessage, OperateionMessage } from './constant';
 @WebSocketGateway({
   cors: {
-    origin: ['http://localhost:5173'],
+    origin: ['http://localhost:5173', 'http://192.168.101.2:5173'],
     credentials: true,
   },
 })
@@ -91,6 +91,9 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleLeaveRoom(client: Socket, payload: { roomCode: string; playerId: string }) {
     const res = this.gameService.leaveRoom(payload.roomCode, payload.playerId);
     client.leave(payload.roomCode);
+    if(!res.success){
+      return res
+    }
     this.emitGameStatusUpdate(res)
   }
 
@@ -126,12 +129,17 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       payload.playerId,
       payload.description
     );
-    
+    if(!res.success){
+      return res
+    }
     this.emitGameStatusUpdate(res)
   }
   @SubscribeMessage('cast-vote')
   handleCastVote(client: Socket, payload: { roomCode: string; voterId: string; targetId: string }) {
     const res = this.gameService.castVote(payload.roomCode, payload.voterId, payload.targetId);
+    if(!res.success){
+      return res
+    }
     this.emitGameStatusUpdate(res)
   }
   @SubscribeMessage('reset-game')

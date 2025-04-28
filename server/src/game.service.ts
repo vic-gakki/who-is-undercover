@@ -174,6 +174,9 @@ export class GameService {
       return generateErrorResponse(ErrorMessage.ROOM_NOT_FOUND);
     }
     const roundVotes = room.votes[room.round] || (room.votes[room.round] = {})
+    if(room.players.find(player => player.id === voterId).isEliminated){
+      return generateErrorResponse(ErrorMessage.YOU_ARE_OUT)
+    }
     roundVotes[voterId] = targetId
     return this.updateGameStatus(roomCode)
   }
@@ -208,7 +211,7 @@ export class GameService {
       return res
     }
     const room = this.rooms.get(roomCode);
-    const activePlayers = this.getActivePlayers(roomCode)
+    let activePlayers = this.getActivePlayers(roomCode)
     const activePlayerIds = activePlayers.map(player => player.id)
     if(room.phase === 'description'){
       const roundDescriptions = room.descriptions[room.round]
@@ -252,6 +255,8 @@ export class GameService {
         if(isGameOver) {
           return isGameOver
         }
+        activePlayers = this.getActivePlayers(roomCode)
+        activePlayers[0].inTurn = true
         room.phase = 'description'
         room.round++
       }

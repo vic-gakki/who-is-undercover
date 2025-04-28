@@ -102,29 +102,29 @@ const getRound = (round:number) => {
     <!-- Previous Descriptions -->
     <div class="mt-8" v-if="!isNil(round)">
       <h3 class="text-lg font-semibold mb-4">Previous Descriptions</h3>
-      <div v-for="(r) in (round + 1)" class="space-y-4">
+      <div v-for="(r, rindex) in (round + 1)" class="space-y-4">
           <p class="font-semibold">Round {{ r }}</p>
-            <template v-for="(player, index) in players" :key="player.id">
-              <div
-                v-if="player.id in getRound(round)"
-                class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 animate-fade-in"
-              >
-                <div class="flex items-start">
-                  <div class="w-8 h-8 rounded-full bg-secondary-500 flex items-center justify-center text-white font-medium text-sm mr-3 flex-shrink-0">
-                    {{ index + 1 }}
+          <template v-for="(player, index) in players" :key="player.id">
+            <div
+              v-if="player.id in getRound(rindex)"
+              class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 animate-fade-in"
+            >
+              <div class="flex items-start">
+                <div class="w-8 h-8 rounded-full bg-secondary-500 flex items-center justify-center text-white font-medium text-sm mr-3 flex-shrink-0">
+                  {{ index + 1 }}
+                </div>
+                
+                <div>
+                  <div class="font-medium mb-1">
+                    {{ player.id === currentPlayer?.id ? 'You' : player.name }}
                   </div>
-                  
-                  <div>
-                    <div class="font-medium mb-1">
-                      {{ player.id === currentPlayer?.id ? 'You' : player.name }}
-                    </div>
-                    <p class="text-gray-700 dark:text-gray-300">
-                      "{{ getRound(round)[player.id] }}"
-                    </p>
-                  </div>
+                  <p class="text-gray-700 dark:text-gray-300">
+                    "{{ getRound(rindex)[player.id] }}"
+                  </p>
                 </div>
               </div>
-            </template>
+            </div>
+          </template>
         </div>
     </div>
   </div>
