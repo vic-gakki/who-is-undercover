@@ -21,6 +21,8 @@ export class GameService {
   private rooms: Map<string, GameRoom> = new Map();
 
   createRoom(roomCode: string, player: Player, settings: RoomSetting) {
+    settings.playerNumber = settings.playerNumber ?? 8
+    settings.undercoverNumber = settings.undercoverNumber ?? 1
     const room: GameRoom = {
       code: roomCode,
       players: [player],
@@ -151,7 +153,7 @@ export class GameService {
     }
     const roundDescriptions = room.descriptions[room.round] || (room.descriptions[room.round] = {})
     roundDescriptions[playerId] = description
-    this.updateGameStatus(roomCode)
+    return this.updateGameStatus(roomCode)
   }
 
   getActivePlayers(roomCode: string): Player[] {
@@ -216,7 +218,7 @@ export class GameService {
       if(nextTurnPlayer){
         nextTurnPlayer.inTurn = true
       }
-      const roundEnd = !!nextTurnPlayer
+      const roundEnd = !nextTurnPlayer
       if(roundEnd){
         room.phase = 'voting'
       }
@@ -248,7 +250,7 @@ export class GameService {
         maxVotedPlayers.forEach(player => player.isEliminated = true)
         const isGameOver = this.isGameOver(roomCode)
         if(isGameOver) {
-          return res
+          return isGameOver
         }
         room.phase = 'description'
         room.round++

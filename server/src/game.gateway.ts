@@ -90,6 +90,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('leave-room')
   handleLeaveRoom(client: Socket, payload: { roomCode: string; playerId: string }) {
     const res = this.gameService.leaveRoom(payload.roomCode, payload.playerId);
+    client.leave(payload.roomCode);
     this.emitGameStatusUpdate(res)
   }
 
@@ -101,7 +102,6 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return res
     }
     client.join(payload.roomCode);
-    res.data.room.players = this.gameService.maskPlayerInfo(res.data.room.players, player.id)
     return res
   }
 
@@ -132,6 +132,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('cast-vote')
   handleCastVote(client: Socket, payload: { roomCode: string; voterId: string; targetId: string }) {
     const res = this.gameService.castVote(payload.roomCode, payload.voterId, payload.targetId);
+    console.log({res})
     this.emitGameStatusUpdate(res)
   }
   @SubscribeMessage('reset-game')
