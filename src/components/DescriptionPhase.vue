@@ -36,6 +36,10 @@ const submitDescription = () => {
   }, 500)
 }
 
+const getRound = (round:number) => {
+  return descriptions.value[round] || {}
+}
+
 </script>
 
 <template>
@@ -102,7 +106,7 @@ const submitDescription = () => {
           <p class="font-semibold">Round {{ r }}</p>
             <template v-for="(player, index) in players" :key="player.id">
               <div
-                v-if="player.id in descriptions[round]"
+                v-if="player.id in getRound(round)"
                 class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 animate-fade-in"
               >
                 <div class="flex items-start">
@@ -115,7 +119,7 @@ const submitDescription = () => {
                       {{ player.id === currentPlayer?.id ? 'You' : player.name }}
                     </div>
                     <p class="text-gray-700 dark:text-gray-300">
-                      "{{ descriptions[round][player.id] }}"
+                      "{{ getRound(round)[player.id] }}"
                     </p>
                   </div>
                 </div>

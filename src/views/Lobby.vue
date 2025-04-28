@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref} from 'vue'
+import { ref } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import PlayerCard from '../components/PlayerCard.vue'
+import InfoModal from '../components/InfoModal.vue'
 import { storeToRefs } from 'pinia'
 
 const gameStore = useGameStore()
@@ -106,10 +107,14 @@ const leaveRoom = () => {
         </div>
         
         <!-- Game Rules Modal -->
-        <div v-if="showRules" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg max-w-lg w-full max-h-[80vh] overflow-y-auto p-6 animate-slide-up">
-            <h2 class="text-2xl font-bold mb-4">Game Rules</h2>
-            
+        <InfoModal
+          :show="showRules"
+          @close="toggleRules"
+        >
+          <template #title>
+            <h2 class="text-2xl font-bold">Game Rules</h2>
+          </template>
+          <template #body>
             <div class="space-y-4">
               <div>
                 <h3 class="text-lg font-semibold text-primary-500">Overview</h3>
@@ -152,14 +157,8 @@ const leaveRoom = () => {
                 </ul>
               </div>
             </div>
-            
-            <div class="mt-6 text-center">
-              <button @click="toggleRules" class="btn btn-primary">
-                Got it!
-              </button>
-            </div>
-          </div>
-        </div>
+          </template>
+        </InfoModal>
       </div>
     </div>
   </div>
