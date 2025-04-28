@@ -16,9 +16,29 @@ const {
 const isClipboardCopied = ref(false)
 const showRules = ref(false)
 
-const copyRoomCode = () => {
-  navigator.clipboard.writeText(roomCode.value)
-  isClipboardCopied.value = true
+const copyRoomCode = async () => {
+  try {
+    // Try modern clipboard API first
+    await navigator.clipboard.writeText(roomCode.value)
+    isClipboardCopied.value = true
+  } catch (err) {
+    // Fallback for non-HTTPS environments
+    const textarea = document.createElement('textarea')
+    textarea.value = roomCode.value
+    textarea.style.position = 'fixed'  // Prevent scrolling to bottom
+    document.body.appendChild(textarea)
+    textarea.select()
+    
+    try {
+      document.execCommand('copy')
+      isClipboardCopied.value = true
+    } catch (err) {
+      console.error('Failed to copy room code:', err)
+      return
+    } finally {
+      document.body.removeChild(textarea)
+    }
+  }
   
   setTimeout(() => {
     isClipboardCopied.value = false
