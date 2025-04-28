@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useGameStore } from '../stores/gameStore';
 import { storeToRefs } from 'pinia';
+import { isNil } from '../util';
 
 const {
   players,
@@ -95,12 +96,10 @@ const submitDescription = () => {
     </div>
     
     <!-- Previous Descriptions -->
-    <div class="mt-8" v-if="round">
+    <div class="mt-8" v-if="!isNil(round)">
       <h3 class="text-lg font-semibold mb-4">Previous Descriptions</h3>
-      
-      <div class="space-y-4">
-        <div v-for="(r) in (round + 1)">
-          <p>Round {{ r }}</p>
+      <div v-for="(r) in (round + 1)" class="space-y-4">
+          <p class="font-semibold">Round {{ r }}</p>
             <template v-for="(player, index) in players" :key="player.id">
               <div
                 v-if="player.id in descriptions[round]"
@@ -123,7 +122,6 @@ const submitDescription = () => {
               </div>
             </template>
         </div>
-      </div>
     </div>
   </div>
 </template>

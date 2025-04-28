@@ -5,6 +5,7 @@ import { socket, isConnected, connectionError } from '../services/socketService'
 import socketService from '../services/socketService'
 import { useRouter } from 'vue-router'
 import type {Player, GamePhase, descriptionType, voteType, GameRoom} from '../../server/src/type'
+import { isNil } from '../util'
 interface GameSession {
   roomCode: string
   player: Pick<Player, 'id' | 'name' | 'isHost'>
@@ -39,8 +40,10 @@ export const useGameStore = defineStore('game', () => {
   const isHost = computed(() => currentPlayer.value?.isHost || false)
   const activePlayers = computed(() => players.value.filter(p => !p.isEliminated))
   const currentTurnPlayer = computed(() => players.value.find(player => player.inTurn))
+  const roundDescriptions = computed(() => isNil(round.value) ? {} : descriptions.value[round.value] ?? {})
+  const roundVotes = computed(() => isNil(round.value) ? {} : votes.value[round.value] ?? {})
   const canVote = computed(() =>
-    currentPlayer.value && round.value && gamePhase.value === 'voting' && !descriptions.value[round.value][currentPlayer.value.id]
+    currentPlayer.value && gamePhase.value === 'voting' && !roundVotes.value[currentPlayer.value.id]
   )
   const gameOver = computed(() => {
     if (!winner.value) return false
@@ -130,6 +133,8 @@ export const useGameStore = defineStore('game', () => {
             currentPlayerId.value = currentPlayer.id
           }
         })
+      }else {
+        router.replace('/')
       }
     }
   }
@@ -221,9 +226,7 @@ export const useGameStore = defineStore('game', () => {
   function resetGame() {
     if (!isHost.value) return
     
-    socket.emit('reset-game', {
-      roomCode: roomCode.value
-    })
+    socket.emit('reset-game', roomCode.value)
   }
 
   function leaveRoom() {
@@ -338,6 +341,8 @@ export const useGameStore = defineStore('game', () => {
     gameOver,
     socketConnected,
     socketError,
+    roundVotes,
+    roundDescriptions,
     
     // Actions
     initializeSocketConnection,

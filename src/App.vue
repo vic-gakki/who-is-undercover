@@ -12,7 +12,7 @@ onMounted(() => {
 
 <template>
   <div class="min-h-screen flex flex-col">
-    <main class="flex-grow h-0">
+    <main class="flex-grow">
       <RouterView />
     </main>
     <Error></Error>

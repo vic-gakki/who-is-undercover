@@ -7,8 +7,7 @@ const {
   currentPlayer,
   canVote,
   activePlayers,
-  round,
-  votes
+  roundVotes
 } = storeToRefs(gameStore)
 const emit = defineEmits<{
   (e: 'submitVote', targetId: string): void
@@ -18,13 +17,13 @@ const selectedPlayer = ref<string | null>(null)
 const isLoading = ref(false)
 
 const hasVoted = computed(() => {
-  if (!currentPlayer.value || !round.value) return false
-  return votes.value[round.value][currentPlayer.value.id]
+  if (!currentPlayer.value) return false
+  return !!roundVotes.value[currentPlayer.value.id]
 })
 
 const myVote = computed(() => {
-  if (!currentPlayer.value || !hasVoted.value || !round.value) return null
-  return votes.value[round.value][currentPlayer.value.id]
+  if (!currentPlayer.value || !hasVoted.value) return null
+  return roundVotes.value[currentPlayer.value.id]
 })
 
 const submitVote = () => {
@@ -40,7 +39,7 @@ const submitVote = () => {
 }
 
 const votedPlayers = computed(() => {
-  return Object.keys(votes.value[round.value!])
+  return Object.keys(roundVotes.value)
 })
 
 const isVoteComplete = computed(() => {
@@ -48,7 +47,7 @@ const isVoteComplete = computed(() => {
 })
 
 const voteResults = computed(() => {
-  return Object.values(votes.value[round.value!]).reduce((acc: Record<string, number>, cur) => {
+  return Object.values(roundVotes.value).reduce((acc: Record<string, number>, cur) => {
     acc[cur] = (acc[cur] || 0) + 1;
     return acc;
   }, {})
@@ -180,7 +179,7 @@ const getVoteCount = (playerId: string) => {
       <div v-if="isVoteComplete" class="mb-8">
         <h3 class="text-lg font-semibold mb-4">Vote Results:</h3>
         
-        <div class="space-y-4">
+        <div class="space-y-4 flex">
           <div 
             v-for="player in activePlayers" 
             :key="player.id"
