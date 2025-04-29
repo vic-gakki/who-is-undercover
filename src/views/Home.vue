@@ -151,7 +151,7 @@ const joinRoom = async () => {
                   :type="showPassword ? 'text' : 'password'"
                   id="roomPassword"
                   class="input !pr-10"
-                  :placeholder="$t('inputPassword')"
+                  :placeholder="$t('info.inputPassword')"
                   :disabled="isLoading"
                   @keyup.enter="createRoom"
                 />
@@ -243,7 +243,7 @@ const joinRoom = async () => {
                   :type="showPassword ? 'text' : 'password'"
                   id="joinRoomPassword"
                   class="input !pr-10"
-                  :placeholder="$t('inputPassword')"
+                  :placeholder="$t('info.inputPassword')"
                   :disabled="isLoading"
                 />
                 <button

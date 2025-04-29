@@ -4,7 +4,7 @@
   "players": "玩家 ({count})",
   "waitingForHost": "等待房主开始...",
   "waitingForRestart": "等待房主开始新游戏...",
-  "minPlayer": "至少需要3名玩家才能开始 ({current}/3)",
+  "minPlayers": "至少需要3名玩家才能开始 ({current}/3)",
   "undercover": "卧底",
   "civilian": "平民",
   "you": "你",

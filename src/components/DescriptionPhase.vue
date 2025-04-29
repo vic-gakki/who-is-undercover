@@ -81,7 +81,7 @@ const getRound = (round:number) => {
           id="description"
           rows="3"
           class="input"
-          :placeholder="$t('descPlaceholder')"
+          :placeholder="$t('info.descPlaceholder')"
           :disabled="isLoading"
         ></textarea>
       </div>
