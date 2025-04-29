@@ -28,7 +28,7 @@ const emit = defineEmits<{
         </div>
         <div class="mt-6 text-center">
           <button @click="emit('close')" class="btn btn-primary">
-            Got it!
+            {{ $t('op.gotIt') }}
           </button>
         </div>
       </section>

@@ -12,7 +12,7 @@ const goHome = () => {
   <div class="page-container h-screen flex items-center justify-center">
     <div class="card max-w-md w-full text-center">
       <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">404</h1>
-      <p class="text-xl mb-8 text-gray-600 dark:text-gray-300">Page not found</p>
+      <p class="text-xl mb-8 text-gray-600 dark:text-gray-300">{{ $t('info.notFound') }}</p>
       
       <div class="mb-8">
         <svg class="mx-auto w-32 h-32 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -21,7 +21,7 @@ const goHome = () => {
       </div>
       
       <button @click="goHome" class="btn btn-primary">
-        Go Home
+        {{ $t('op.goHome') }}
       </button>
     </div>
   </div>

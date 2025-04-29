@@ -92,16 +92,15 @@ const joinRoom = async () => {
   <div class="page-container h-full flex items-center justify-center">
     <div class="w-full max-w-md">
       <div class="card animate-fade-in">
-        <h1 class="text-center text-3xl font-bold mb-8">Who Is the Undercover?</h1>
+        <h1 class="text-center text-3xl font-bold mb-8">{{ $t('whoIsUndercover') }}</h1>
         
         <!-- Socket connection warning -->
         <div 
           v-if="!gameStore.socketConnected" 
           class="mb-6 p-4 bg-warning-500 bg-opacity-10 border border-warning-500 rounded-lg text-warning-500 text-center"
         >
-          <p class="font-medium mb-1">Game server not available</p>
-          <p class="text-sm">{{ gameStore.socketError || 'Waiting for server connection...' }}</p>
-          <p class="text-sm mt-2">You can still explore the app, but multiplayer features won't work until the server is available.</p>
+          <p class="font-medium mb-1">{{$t('gameServerUnavailable')}}</p>
+          <p class="text-sm">{{ gameStore.socketError || $t('waitForServerConnection') }}</p>
         </div>
         
         <div v-if="error" class="mb-6 p-4 bg-error-500 bg-opacity-10 border border-error-500 rounded-lg text-error-500 text-center">
@@ -116,7 +115,7 @@ const joinRoom = async () => {
               :class="{ 'bg-opacity-90': isLoading }"
               :disabled="isLoading"
             >
-              Create New Game
+              {{ $t('op.createRoom') }}
             </button>
           </div>
           
@@ -127,32 +126,32 @@ const joinRoom = async () => {
               :class="{ 'bg-opacity-90': isLoading }"
               :disabled="isLoading"
             >
-              Join Existing Game
+              {{ $t('op.joinRoom') }}
             </button>
           </div>
           
           <!-- Create Room Form -->
           <div v-if="showCreateRoom" class="space-y-4 animate-slide-up">
             <div>
-              <label for="playerName" class="block text-sm font-medium mb-1">Your Name</label>
+              <label for="playerName" class="block text-sm font-medium mb-1">{{ $t('yourName') }}</label>
               <input
                 v-model="playerName"
                 type="text"
                 id="playerName"
                 class="input"
-                placeholder="Enter your name"
+                :placeholder="$t('info.inputName')"
                 :disabled="isLoading"
               />
             </div>
             <div>
-              <label for="roomPassword" class="block text-sm font-medium mb-1">Room Password</label>
+              <label for="roomPassword" class="block text-sm font-medium mb-1">{{ $t('roomPassword') }}</label>
               <div class="relative">
                 <input
                   v-model="roomPassword"
                   :type="showPassword ? 'text' : 'password'"
                   id="roomPassword"
                   class="input !pr-10"
-                  placeholder="Enter Room Password (optional)"
+                  :placeholder="$t('inputPassword')"
                   :disabled="isLoading"
                   @keyup.enter="createRoom"
                 />
@@ -173,7 +172,7 @@ const joinRoom = async () => {
               </div>
             </div>
             <div class="flex items-center">
-              <label class="block text-sm font-medium mr-2">Mode</label>
+              <label class="block text-sm font-medium mr-2">{{ $t('mode') }}</label>
               <div class="flex items-center">
                 <div class="relative inline-block w-12 mr-2 align-middle select-none">
                   <input
@@ -191,7 +190,7 @@ const joinRoom = async () => {
                   ></label>
                 </div>
                 <span class="text-sm font-medium ml-2" :class="isOnline ? 'text-green-400' : 'text-gray-600'">
-                  {{ isOnline ? 'Online' : 'Offline' }}
+                  {{ $t(isOnline ? 'online' : 'offline') }}
                 </span>
               </div>
             </div>
@@ -202,49 +201,49 @@ const joinRoom = async () => {
               :class="{ 'opacity-70': isLoading || !gameStore.socketConnected }"
               :disabled="isLoading || !gameStore.socketConnected"
             >
-              <span v-if="isLoading">Creating...</span>
-              <span v-else-if="!gameStore.socketConnected">Waiting for Server...</span>
-              <span v-else>Create Room</span>
+              <span v-if="isLoading">{{ $t('info.creating') }}</span>
+              <span v-else-if="!gameStore.socketConnected">{{ $t('info.waitingForServer') }}</span>
+              <span v-else>{{ $t('op.create') }}</span>
             </button>
           </div>
           
           <!-- Join Room Form -->
           <div v-if="showJoinRoom" class="space-y-4 animate-slide-up">
             <div>
-              <label for="playerNameJoin" class="block text-sm font-medium mb-1">Your Name</label>
+              <label for="playerNameJoin" class="block text-sm font-medium mb-1">{{ $t('yourName') }}</label>
               <input
                 v-model="playerName"
                 type="text"
                 id="playerNameJoin"
                 class="input"
-                placeholder="Enter your name"
+                :placeholder="$t('info.inputName')"
                 :disabled="isLoading"
                 @keyup.enter="joinRoom"
               />
             </div>
             
             <div>
-              <label for="roomCode" class="block text-sm font-medium mb-1">Room Code</label>
+              <label for="roomCode" class="block text-sm font-medium mb-1">{{ $t('roomCode') }}</label>
               <input
                 v-model="roomCode"
                 type="text"
                 id="roomCode"
                 class="input uppercase"
-                placeholder="Enter room code"
+                :placeholder="$t('info.inputRoomCode')"
                 :disabled="isLoading"
                 @keyup.enter="joinRoom"
               />
             </div>
 
             <div>
-              <label for="joinRoomPassword" class="block text-sm font-medium mb-1">Room Password</label>
+              <label for="joinRoomPassword" class="block text-sm font-medium mb-1">{{ $t('roomPassword') }}</label>
               <div class="relative">
                 <input
                   v-model="roomPassword"
                   :type="showPassword ? 'text' : 'password'"
                   id="joinRoomPassword"
                   class="input !pr-10"
-                  placeholder="Enter Room Password (optional)"
+                  :placeholder="$t('inputPassword')"
                   :disabled="isLoading"
                 />
                 <button
@@ -270,15 +269,15 @@ const joinRoom = async () => {
               :class="{ 'opacity-70': isLoading || !gameStore.socketConnected }"
               :disabled="isLoading || !gameStore.socketConnected"
             >
-              <span v-if="isLoading">Joining...</span>
-              <span v-else-if="!gameStore.socketConnected">Waiting for Server...</span>
-              <span v-else>Join Room</span>
+              <span v-if="isLoading">{{ $t('info.joining') }}</span>
+              <span v-else-if="!gameStore.socketConnected">{{ $t('info.waitingForServer') }}</span>
+              <span v-else>{{ $t('op.join') }}</span>
             </button>
           </div>
         </div>
         
         <div class="mt-8 text-center text-sm text-gray-500">
-          <p>A social deduction game where you must find the undercover player!</p>
+          <p>{{ $t('info.desc') }}</p>
         </div>
       </div>
     </div>

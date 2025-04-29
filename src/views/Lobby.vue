@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/gameStore'
 import PlayerCard from '../components/PlayerCard.vue'
-import InfoModal from '../components/InfoModal.vue'
 import { storeToRefs } from 'pinia'
-
+const { t } = useI18n()
 const gameStore = useGameStore()
 const {
   isHost,
@@ -63,10 +63,10 @@ const leaveRoom = () => {
     <div class="max-w-3xl mx-auto">
       <div class="card animate-fade-in">
         <div class="flex flex-col md:flex-row justify-between items-center mb-8">
-          <h1 class="text-2xl md:text-3xl font-bold mb-4 md:mb-0">Game Lobby</h1>
+          <h1 class="text-2xl md:text-3xl font-bold mb-4 md:mb-0">{{t('lobbyTitle')}}</h1>
           
           <div class="flex items-center space-x-2">
-            <span class="text-gray-500">Room Code:</span>
+            <span class="text-gray-500">{{ t('roomCode') }}: </span>
             <div 
               @click="copyRoomCode" 
               class="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg font-mono font-bold cursor-pointer flex items-center"
@@ -79,12 +79,12 @@ const leaveRoom = () => {
                 </svg>
               </button>
             </div>
-            <span v-if="isClipboardCopied" class="text-xs text-success-500 animate-fade-in">Copied!</span>
+            <span v-if="isClipboardCopied" class="text-xs text-success-500 animate-fade-in">{{ t('op.copied') }}</span>
           </div>
         </div>
         
         <div class="mb-8">
-          <h2 class="text-xl font-semibold mb-4">Players ({{ players.length }})</h2>
+          <h2 class="text-xl font-semibold mb-4">{{ t('players', {count: players.length}) }}</h2>
           
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <PlayerCard 
@@ -96,7 +96,7 @@ const leaveRoom = () => {
           </div>
           
           <div v-if="players.length < 3" class="mt-4 text-center text-warning-500">
-            <p>Need at least 3 players to start ({{ players.length }}/3)</p>
+            <p>{{ t('minPlayers', {current: players.length}) }}</p>
           </div>
         </div>
         
@@ -108,77 +108,19 @@ const leaveRoom = () => {
             :disabled="players.length < 3"
             :class="{ 'opacity-50 cursor-not-allowed': players.length < 3 }"
           >
-            Start Game
+            {{ t('op.startGame') }}
           </button>
           
           <button v-else class="btn btn-outline" disabled>
-            Waiting for host to start...
+            {{ t('waitingForHost') }}
           </button>
           
           <div class="flex space-x-4">
-            <button @click="toggleRules" class="btn btn-outline">
-              Game Rules
-            </button>
-            
             <button @click="leaveRoom" class="btn btn-outline text-error-500 border-error-500 hover:bg-error-500 hover:bg-opacity-10">
-              Leave Room
+              {{ t('op.leaveRoom') }}
             </button>
           </div>
         </div>
-        
-        <!-- Game Rules Modal -->
-        <InfoModal
-          :show="showRules"
-          @close="toggleRules"
-        >
-          <template #title>
-            <h2 class="text-2xl font-bold">Game Rules</h2>
-          </template>
-          <template #body>
-            <div class="space-y-4">
-              <div>
-                <h3 class="text-lg font-semibold text-primary-500">Overview</h3>
-                <p>One player is the "undercover" with a slightly different word than everyone else. Try to find out who it is!</p>
-              </div>
-              
-              <div>
-                <h3 class="text-lg font-semibold text-primary-500">Setup</h3>
-                <ul class="list-disc list-inside space-y-2">
-                  <li>All players except one receive the same word (Civilians)</li>
-                  <li>One player receives a similar but different word (Undercover)</li>
-                  <li>No one knows who has which word</li>
-                </ul>
-              </div>
-              
-              <div>
-                <h3 class="text-lg font-semibold text-primary-500">Gameplay</h3>
-                <ol class="list-decimal list-inside space-y-2">
-                  <li><strong>Description Phase:</strong> Each player describes their word without saying it directly</li>
-                  <li><strong>Voting Phase:</strong> Everyone votes on who they think is the undercover</li>
-                  <li><strong>Elimination:</strong> The player with the most votes is eliminated</li>
-                  <li><strong>Repeat:</strong> Continue until the undercover is eliminated or only one civilian remains</li>
-                </ol>
-              </div>
-              
-              <div>
-                <h3 class="text-lg font-semibold text-primary-500">Winning</h3>
-                <ul class="list-disc list-inside space-y-2">
-                  <li><strong>Civilians win:</strong> If they eliminate the undercover</li>
-                  <li><strong>Undercover wins:</strong> If only one civilian remains</li>
-                </ul>
-              </div>
-              
-              <div>
-                <h3 class="text-lg font-semibold text-primary-500">Strategy</h3>
-                <ul class="list-disc list-inside space-y-2">
-                  <li>As a civilian, be vague but accurate to confuse the undercover</li>
-                  <li>As the undercover, pay attention to others' descriptions to blend in</li>
-                  <li>Look for inconsistencies in descriptions</li>
-                </ul>
-              </div>
-            </div>
-          </template>
-        </InfoModal>
       </div>
     </div>
   </div>

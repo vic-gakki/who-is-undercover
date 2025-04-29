@@ -70,32 +70,31 @@ const getVoteCount = (playerId: string) => {
         }"
       >
         <h3 class="font-medium text-lg mb-2">
-          <span v-if="canVote">Time to vote!</span>
-          <span v-else-if="hasVoted">You have voted</span>
-          <span v-else>Voting in progress</span>
+          <span v-if="canVote">{{ $t('info.timeToVote') }}</span>
+          <span v-else-if="hasVoted">{{ $t('info.haveVoted') }}</span>
+          <span v-else>{{ $t('info.voteInProgress') }}</span>
         </h3>
         
         <p class="text-sm text-gray-600 dark:text-gray-300">
           <span v-if="canVote">
-            Select a player who you suspect is the undercover.
+            {{ $t('info.selectToVote') }}
           </span>
           <span v-else-if="hasVoted">
-            You voted for {{ activePlayers.find(p => p.id === myVote)?.name || 'Unknown' }}.
-            Waiting for others to vote...
+            {{ $t('info.waitingOthersVote', {name: activePlayers.find(p => p.id === myVote)?.name || 'Unknown'}) }}
           </span>
           <span v-else>
-            Waiting for all players to cast their votes...
+            {{ $t('info.waitVoteForAll') }}
           </span>
         </p>
         
         <div v-if="isVoteComplete" class="mt-4 p-3 bg-warning-500 bg-opacity-10 border border-warning-500 rounded-lg text-warning-500 text-sm font-medium">
-          All votes are in! The results will be revealed shortly.
+          {{ $t('info.voteComplete') }}
         </div>
       </div>
       
       <!-- Players to Vote -->
       <div v-if="canVote" class="mb-8">
-        <h3 class="text-lg font-semibold mb-4">Select a player to eliminate:</h3>
+        <h3 class="text-lg font-semibold mb-4">{{ $t('info.selectPlayer') }}:</h3>
         
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div 
@@ -122,7 +121,7 @@ const getVoteCount = (playerId: string) => {
                 <div class="ml-3 flex-grow">
                   <div class="font-medium">
                     {{ player.name }}
-                    <span v-if="player.id === currentPlayer?.id" class="ml-1 text-xs text-gray-500">(you)</span>
+                    <span v-if="player.id === currentPlayer?.id" class="ml-1 text-xs text-gray-500">({{ $t('you') }})</span>
                   </div>
                 </div>
                 
@@ -143,20 +142,20 @@ const getVoteCount = (playerId: string) => {
             :disabled="!selectedPlayer || isLoading || selectedPlayer === currentPlayer?.id"
             :class="{ 'opacity-70': !selectedPlayer || isLoading || selectedPlayer === currentPlayer?.id }"
           >
-            <span v-if="isLoading">Submitting...</span>
-            <span v-else>Submit Vote</span>
+            <span v-if="isLoading">{{ $t('info.submitting') }}</span>
+            <span v-else>{{ $t('op.submitVote') }}</span>
           </button>
         </div>
       </div>
       
       <!-- Vote Status -->
       <div v-if="!canVote && !isVoteComplete" class="mb-8">
-        <h3 class="text-lg font-semibold mb-4">Vote Status:</h3>
+        <h3 class="text-lg font-semibold mb-4">{{ $t('info.voteStatus') }}:</h3>
         
         <div class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
           <div class="mb-4">
             <div class="flex justify-between items-center mb-2">
-              <span class="text-sm font-medium">Votes Cast</span>
+              <span class="text-sm font-medium">{{ $t('info.votesCast') }}</span>
               <span class="text-sm font-bold">{{ votedPlayers.length }} / {{ activePlayers.length }}</span>
             </div>
             
@@ -167,17 +166,12 @@ const getVoteCount = (playerId: string) => {
               ></div>
             </div>
           </div>
-          
-          <div class="text-center text-gray-500 text-sm">
-            <span v-if="hasVoted">Waiting for other players to vote...</span>
-            <span v-else>You should have cast your vote...</span>
-          </div>
         </div>
       </div>
       
       <!-- Vote Results (once everyone has voted) -->
       <div v-if="isVoteComplete" class="mb-8">
-        <h3 class="text-lg font-semibold mb-4">Vote Results:</h3>
+        <h3 class="text-lg font-semibold mb-4">{{ $t('info.voteResults') }}:</h3>
         
         <div class="space-y-4 flex">
           <div 
@@ -198,7 +192,7 @@ const getVoteCount = (playerId: string) => {
                 <div class="ml-3">
                   <div class="font-medium">
                     {{ player.name }}
-                    <span v-if="player.id === currentPlayer?.id" class="ml-1 text-xs text-gray-500">(you)</span>
+                    <span v-if="player.id === currentPlayer?.id" class="ml-1 text-xs text-gray-500">({{ $t('you') }})</span>
                   </div>
                 </div>
               </div>

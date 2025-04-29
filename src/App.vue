@@ -17,7 +17,7 @@ onMounted(() => {
     </main>
     <Error></Error>
     <footer class="py-4 px-6 text-center text-sm text-gray-500 dark:text-gray-400">
-      <p>© {{ new Date().getFullYear() }} Who Is the Undercover Game</p>
+      <p>© {{ new Date().getFullYear() }} {{ $t('justForFun') }}</p>
     </footer>
   </div>
 </template>

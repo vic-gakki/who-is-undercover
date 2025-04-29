@@ -52,15 +52,15 @@ const getRound = (round:number) => {
     >
       <div v-if="currentTurnPlayer" class="flex-grow">
         <div class="font-medium mb-1">
-          <span v-if="currentPlayer?.inTurn" class="text-accent-600 dark:text-accent-400">Your turn to describe!</span>
-          <span v-else>{{ currentTurnPlayer.name }}'s turn to describe</span>
+          <span v-if="currentPlayer?.inTurn" class="text-accent-600 dark:text-accent-400">{{ $t('info.yourTurnToDesc') }}!</span>
+          <span v-else>{{ $t('info.someoneTurnToDesc', {name: currentTurnPlayer.name}) }}</span>
         </div>
         <p class="text-sm text-gray-600 dark:text-gray-300">
           <span v-if="currentPlayer?.inTurn">
-            Describe your word without saying it directly. Be careful - the undercover is listening!
+            {{ $t('info.yourTurnTip') }}
           </span>
           <span v-else>
-            Waiting for {{ currentTurnPlayer.name }} to provide a description...
+            {{ $t('info.watingDesc', {name: currentTurnPlayer.name}) }}
           </span>
         </p>
       </div>
@@ -75,13 +75,13 @@ const getRound = (round:number) => {
     <!-- Description Input (only shown when it's current player's turn) -->
     <div v-if="currentPlayer?.inTurn" class="mb-8">
       <div class="mb-4">
-        <label for="description" class="block text-sm font-medium mb-1">Your Description</label>
+        <label for="description" class="block text-sm font-medium mb-1">{{ $t('yourDesc') }}</label>
         <textarea
           v-model="description"
           id="description"
           rows="3"
           class="input"
-          placeholder="Describe your word without saying it directly..."
+          :placeholder="$t('descPlaceholder')"
           :disabled="isLoading"
         ></textarea>
       </div>
@@ -93,17 +93,17 @@ const getRound = (round:number) => {
           :disabled="!isInputValid || isLoading"
           :class="{ 'opacity-70': !isInputValid || isLoading }"
         >
-          <span v-if="isLoading">Submitting...</span>
-          <span v-else>Submit Description</span>
+          <span v-if="isLoading">{{ $t('info.submitting') }}</span>
+          <span v-else>{{ $t('op.submitDesc') }}</span>
         </button>
       </div>
     </div>
     
     <!-- Previous Descriptions -->
     <div class="mt-8" v-if="!isNil(round)">
-      <h3 class="text-lg font-semibold mb-4">Previous Descriptions</h3>
+      <h3 class="text-lg font-semibold mb-4">{{ $t('prevDesc') }}</h3>
       <div v-for="(r, rindex) in (round + 1)" class="space-y-4">
-          <p class="font-semibold">Round {{ r }}</p>
+          <p class="font-semibold">{{ $t('round', {round: r}) }}</p>
           <template v-for="(player, index) in players" :key="player.id">
             <div
               v-if="player.id in getRound(rindex)"
