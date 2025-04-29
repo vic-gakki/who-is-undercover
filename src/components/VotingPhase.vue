@@ -2,12 +2,15 @@
 import { ref, computed } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import { storeToRefs } from 'pinia'
+import InfoModal from './InfoModal.vue'
 const gameStore = useGameStore()
 const {
   currentPlayer,
   canVote,
   activePlayers,
-  roundVotes
+  roundVotes,
+  isOfflineRoom,
+  gamePhase
 } = storeToRefs(gameStore)
 const emit = defineEmits<{
   (e: 'submitVote', targetId: string): void
@@ -57,11 +60,29 @@ const getVoteCount = (playerId: string) => {
   return voteResults.value[playerId] || 0
 }
 
+const showVoteModal = ref(false)
+
+const voteModalOpen = computed(() => {
+  return !currentPlayer.value?.isEliminated && (isOfflineRoom.value ? showVoteModal.value : gamePhase.value === 'voting')
+})
+
 </script>
 
 <template>
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg max-w-md w-full p-6 animate-slide-up">
+  <div class="flex justify-center" v-if="isOfflineRoom && !currentPlayer?.isEliminated">
+    <button
+      @click="showVoteModal = true"
+      class="btn btn-primary opacity-70"
+    >
+      <span>{{ $t('op.vote') }}</span>
+    </button>
+  </div>
+        
+  <InfoModal :show="voteModalOpen" :show-confirm="false" :show-close-icon="isOfflineRoom" @close="showVoteModal = false">
+    <template #title>
+      <p>{{ $t('op.vote') }}</p>
+    </template>
+    <template #body>
       <div
         class="mb-6 p-4 rounded-lg"
         :class="{ 
@@ -220,6 +241,6 @@ const getVoteCount = (playerId: string) => {
           </div>
         </div>
       </div>
-    </div>
-  </div>
+    </template>
+  </InfoModal>
 </template>

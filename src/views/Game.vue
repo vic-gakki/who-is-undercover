@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useGameStore } from '../stores/gameStore'
 import DescriptionPhase from '../components/DescriptionPhase.vue'
 import VotingPhase from '../components/VotingPhase.vue'
+import EliminateHistory from '../components/EliminateHistory.vue'
 import { storeToRefs } from 'pinia'
 
 const gameStore = useGameStore()
@@ -15,11 +16,10 @@ const {
   activePlayers,
   currentPlayer,
   players,
-  roomMode
+  isOfflineRoom
 } = storeToRefs(gameStore)
 
-const showWordModal = ref(true)
-const modalAutoOpen = computed(() => gamePhase.value === 'description')
+const showWordModal = ref(false)
 const showLeaveConfirm = ref(false)
 
 const closeWordModal = () => {
@@ -38,11 +38,6 @@ const cancelLeave = () => {
   showLeaveConfirm.value = false
 }
 
-const showVoteModal = ref(false)
-
-const toggleVoteModal = (bool: boolean) => {
-  showVoteModal.value = bool
-}
 </script>
 
 <template>
@@ -51,7 +46,7 @@ const toggleVoteModal = (bool: boolean) => {
       <div class="card animate-fade-in">
         <div class="flex flex-col md:flex-row justify-between items-center mb-8">
           <div>
-            <h1 class="text-2xl md:text-3xl font-bold mb-2">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2" v-if="!isOfflineRoom">
               <span v-if="gamePhase === 'description'">{{ $t('descPhase') }}</span>
               <span v-else-if="gamePhase === 'voting'">{{ $t('votePhase') }}</span>
             </h1>
@@ -92,23 +87,20 @@ const toggleVoteModal = (bool: boolean) => {
           </div>
         </div>
 
-        <div class="flex justify-center" v-if="roomMode === 'offline'">
-          <button 
-            @click="showVoteModal = true" 
-            class="btn btn-primary opacity-70"
-          >
-            <span>{{ $t('op.vote') }}</span>
-          </button>
+        <div v-if="currentPlayer?.isEliminated" class="mb-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+          <p>{{ $t('info.youAreEliminated') }}</p>
         </div>
-        
+
+        <EliminateHistory />
+
         <!-- Description Phase -->
         <DescriptionPhase
+        v-if="!isOfflineRoom"
           @submit-description="gameStore.submitDescription"
         />
         
         <!-- Voting Phase -->
         <VotingPhase
-          v-if="((roomMode === 'online' && gamePhase === 'voting') || showVoteModal) && !currentPlayer?.isEliminated"
           @submit-vote="gameStore.submitVote"
         />
         
@@ -123,7 +115,7 @@ const toggleVoteModal = (bool: boolean) => {
         </div>
         
         <!-- Player's Word Modal -->
-        <div v-if="showWordModal && modalAutoOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div v-if="showWordModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg max-w-md w-full p-6 animate-slide-up">
             <h2 class="text-2xl font-bold mb-4">{{ $t('yourWord') }}</h2>
             

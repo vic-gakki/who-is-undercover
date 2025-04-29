@@ -79,7 +79,8 @@
     "selectPlayer": "选择要淘汰的玩家",
     "voteStatus": "投票状态",
     "votesCast": "投票数",
-    "voteResults": "投票结果"
+    "voteResults": "投票结果",
+    "youAreEliminated": "对不起，你被淘汰了，下次再接再厉吧！😤"
   },
   "justForFun": "图一乐",
   "descPhase": "描述阶段",
@@ -94,5 +95,7 @@
   "word": "词",
   "yourDesc": "你的描述",
   "prevDesc": "之前的描述",
-  "round": "第{round}轮"
+  "round": "第 {round} 轮",
+  "eliminatedHistory": "淘汰历史",
+  "voteHistory": "投票历史"
 }

@@ -114,12 +114,10 @@ const leaveRoom = () => {
           <button v-else class="btn btn-outline" disabled>
             {{ t('waitingForHost') }}
           </button>
+          <button @click="leaveRoom" class="btn btn-outline text-error-500 border-error-500 hover:bg-error-500 hover:bg-opacity-10">
+            {{ t('op.leaveRoom') }}
+          </button>
           
-          <div class="flex space-x-4">
-            <button @click="leaveRoom" class="btn btn-outline text-error-500 border-error-500 hover:bg-error-500 hover:bg-opacity-10">
-              {{ t('op.leaveRoom') }}
-            </button>
-          </div>
         </div>
       </div>
     </div>

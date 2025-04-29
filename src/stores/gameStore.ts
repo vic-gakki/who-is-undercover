@@ -45,7 +45,7 @@ export const useGameStore = defineStore('game', () => {
   const roundVotes = computed(() => isNil(round.value) ? {} : votes.value[round.value] ?? {})
   const isOfflineRoom = computed(() => roomMode.value === 'offline')
   const canVote = computed(() =>
-    currentPlayer.value && (gamePhase.value === 'voting' && !roundVotes.value[currentPlayer.value.id] || isOfflineRoom.value)
+    currentPlayer.value && gamePhase.value === 'voting' && !roundVotes.value[currentPlayer.value.id]
   )
   const gameOver = computed(() => {
     if (!winner.value) return false
@@ -293,7 +293,7 @@ export const useGameStore = defineStore('game', () => {
       players.value = data.players
       word.value = currentPlayer.value?.word!
       isUndercover.value = currentPlayer.value?.isUndercover!
-      gamePhase.value = 'description'
+      gamePhase.value = isOfflineRoom.value ? 'voting' : 'description'
       round.value = 0
     })
 

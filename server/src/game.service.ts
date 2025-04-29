@@ -120,7 +120,7 @@ export class GameService {
     const underCoverIds = players.slice(0, room.undercoverNumber).map(player => player.id)
     room.civilianWord = civilian;
     room.undercoverWord = undercover;
-    room.phase = 'description';
+    room.phase = room.mode === 'offline' ? 'voting' : 'description';
     room.players = room.players.map((player, index) => {
       const isUndercover = underCoverIds.includes(player.id);
       return {
@@ -257,7 +257,7 @@ export class GameService {
         }
         activePlayers = this.getActivePlayers(roomCode)
         activePlayers[0].inTurn = true
-        room.phase = 'description'
+        room.phase = room.mode === 'offline' ? 'voting' : 'description'
         room.round++
       }
       return genereateSuccessResponse(OperateionMessage.VOTE_CASTED, {

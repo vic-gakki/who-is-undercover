@@ -79,7 +79,8 @@
     "selectPlayer": "Select a player to eliminate",
     "voteStatus": "Vote Status",
     "votesCast": "Votes Cast",
-    "voteResults": "Vote Results"
+    "voteResults": "Vote Results",
+    "youAreEliminated": "Sorry, you are eliminated."
   },
   "justForFun": "Just For Fun",
   "descPhase": "Description Phase",
@@ -94,5 +95,7 @@
   "word": "Word",
   "yourDesc": "Your Description",
   "prevDesc": "Previous Descriptions",
-  "round": "Round {round}"
+  "round": "Round {round}",
+  "eliminatedHistory": "Eliminated History",
+  "voteHistory": "Vote History"
 }
