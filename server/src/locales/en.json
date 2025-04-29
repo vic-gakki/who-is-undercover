@@ -1,0 +1,22 @@
+{
+  "error": {
+    "room_not_found": "Room not found",
+    "invalid_password": "Invalid password",
+    "game_already_started": "Game already started",
+    "unknown_error": "Unknown error",
+    "room_full": "Sorry, this room is already full",
+    "you_are_out": "Sorry, you are out"
+  },
+  "operation": {
+    "room_created": "Room created successfully",
+    "player_joined": "A player joined",
+    "player_rejoined": "A player rejoined",
+    "player_left": "A player left",
+    "game_started": "Game started",
+    "game_restarted": "Game restarted successfully",
+    "game_ended": "Game ended",
+    "vote_casted": "Vote casted successfully",
+    "description_submitted": "Description submitted successfully",
+    "vote_tie": "Vote tied"
+  }
+}

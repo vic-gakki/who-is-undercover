@@ -1,0 +1,22 @@
+{
+  "error": {
+    "room_not_found": "房间未找到",
+    "invalid_password": "密码不正确",
+    "game_already_started": "游戏已开始",
+    "unknown_error": "未知错误",
+    "room_full": "抱歉，该房间已满",
+    "you_are_out": "抱歉，你已出局"
+  },
+  "operation": {
+    "room_created": "房间创建成功",
+    "player_joined": "玩家加入",
+    "player_rejoined": "玩家重新加入",
+    "player_left": "玩家离开",
+    "game_started": "游戏已开始",
+    "game_restarted": "游戏重新开始成功",
+    "game_ended": "游戏结束",
+    "vote_casted": "投票成功",
+    "description_submitted": "描述提交成功",
+    "vote_tie": "投票平局"
+  }
+}
