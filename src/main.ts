@@ -7,6 +7,7 @@ import { routes } from './router'
 import { createI18n } from 'vue-i18n'
 import en from './locales/en.json'
 import zh from './locales/zh.json'
+import Message from './components/Message'
 
 // Create router instance
 const router = createRouter({
@@ -29,6 +30,7 @@ const i18n = createI18n({
 
 // Create app
 const app = createApp(App)
+app.config.globalProperties.$message = Message
 
 // Use plugins
 app.use(router)
