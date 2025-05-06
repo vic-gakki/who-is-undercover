@@ -37,7 +37,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } = this.gameService.createRoom(payload.roomCode, player, payload.settings);
     
     client.join(payload.roomCode);
-    this.server.to(payload.roomCode).emit('room-joined', { players: this.gameService.maskPlayerInfo(data.room.players), roomCode: data.room.code });
+    this.server.to(payload.roomCode).emit('room-joined', { players: this.gameService.maskPlayerInfo(data.room.players), roomCode: data.room.code, roomMode: data.room.mode });
   }
 
   @SubscribeMessage('join-room')

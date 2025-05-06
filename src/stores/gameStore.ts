@@ -291,10 +291,11 @@ export const useGameStore = defineStore('game', () => {
 
   // Socket listeners
   function initSocketListeners() {
-    socket.on('room-joined', (data: { players: Player[], roomCode: string }) => {
+    socket.on('room-joined', (data: { players: Player[], roomCode: string, roomMode: string }) => {
       players.value = data.players
       gamePhase.value = 'waiting'
       roomCode.value = data.roomCode
+      roomMode.value = data.roomMode
     })
 
     socket.on('player-left', (data: { playerId: string }) => {
