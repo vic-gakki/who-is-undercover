@@ -100,5 +100,7 @@
   "prevDesc": "Previous Descriptions",
   "round": "Round {round}",
   "eliminatedHistory": "Eliminated History",
-  "voteHistory": "Vote History"
+  "voteHistory": "Vote History",
+  "playerNum": "Player Number",
+  "undercoverNum": "Undercover Number"
 }

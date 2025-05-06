@@ -23,6 +23,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleConnection(client: Socket) {
     console.log(`Client connected: ${client.id}`);
+    client.emit('room-list', this.gameService.getRoomList())
   }
 
   handleDisconnect(client: Socket) {
@@ -38,6 +39,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     
     client.join(payload.roomCode);
     this.server.to(payload.roomCode).emit('room-joined', { players: this.gameService.maskPlayerInfo(data.room.players), roomCode: data.room.code, roomMode: data.room.mode });
+    this.server.emit('room-list', this.gameService.getRoomList())
   }
 
   @SubscribeMessage('join-room')

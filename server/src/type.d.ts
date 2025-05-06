@@ -36,3 +36,9 @@ export interface GameServiceResponse<T = {[key: string]: any}> {
   msg?: string;
   data: T
 }
+
+export interface Room {
+  code: string,
+  host: string,
+  availableNum: number
+}

@@ -2,11 +2,14 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../stores/gameStore'
+import type { Room } from '../../server/src/type'
 
 const router = useRouter()
 const gameStore = useGameStore()
 
 const playerName = ref('')
+const playerNum = ref(8)
+const undercoverNum = ref(1)
 const roomPassword = ref('')
 const showPassword = ref(false)
 const isOnline = ref(false) // true = online, false = offline
@@ -33,6 +36,11 @@ const toggleJoinRoom = () => {
   error.value = ''
 }
 
+const openJoin = (room: Room) => {
+  roomCode.value = room.code
+  showJoinRoom.value = true
+}
+
 const createRoom = async () => {
   if (!playerName.value.trim()) {
     error.value = 'Please enter your name'
@@ -48,7 +56,7 @@ const createRoom = async () => {
   isLoading.value = true
   
   try {
-    const newRoomCode = gameStore.createRoom(playerName.value.trim(), roomPassword.value.trim(), isOnline.value)
+    const newRoomCode = gameStore.createRoom(playerName.value.trim(), roomPassword.value.trim(), isOnline.value, playerNum.value, undercoverNum.value)
     router.push({ name: 'lobby', params: { roomCode: newRoomCode } })
   } catch (err) {
     error.value = 'Failed to create room. Please try again.'
@@ -171,6 +179,28 @@ const joinRoom = async () => {
                 </button>
               </div>
             </div>
+            <div>
+              <label for="playerNum" class="block text-sm font-medium mb-1">{{ $t('playerNum') }}</label>
+              <input
+                v-model="playerNum"
+                type="number"
+                id="playerNum"
+                class="input"
+                min="1"
+                :disabled="isLoading"
+              />
+            </div>
+            <div>
+              <label for="undercoverNum" class="block text-sm font-medium mb-1">{{ $t('undercoverNum') }}</label>
+              <input
+                v-model="undercoverNum"
+                type="number"
+                id="undercoverNum"
+                class="input"
+                min="1"
+                :disabled="isLoading"
+              />
+            </div>
             <div class="flex items-center">
               <label class="block text-sm font-medium mr-2">{{ $t('mode') }}</label>
               <div class="flex items-center">
@@ -273,6 +303,25 @@ const joinRoom = async () => {
               <span v-else-if="!gameStore.socketConnected">{{ $t('info.waitingForServer') }}</span>
               <span v-else>{{ $t('op.join') }}</span>
             </button>
+          </div>
+        </div>
+
+        <div class="h-64 mt-4 overflow-auto">
+          <div class="bg-fuchsia-50 rounded-lg p-4 flex justify-between" v-for="room of gameStore.roomList">
+            <div>
+              <p>
+                <span class="text-sm text-gray-500 mr-1">{{ $t('roomCode') }}: </span>
+                <span>{{ room.code }}</span>
+              </p>
+              <p>
+                <span class="text-sm text-gray-500 mr-1">{{ $t('host') }}: </span>
+                <span>{{ room.host }}</span>
+              </p>
+            </div>
+            <div class="flex flex-col justify-between items-center">
+              <div class="border rounded-full w-3 h-3" :class="room.availableNum ? 'bg-green-500' : 'bg-gray-500'"></div>
+              <button v-if="room.availableNum" class="text-sm text-blue-400 p-3" @click="openJoin(room)">➡</button>
+            </div>
           </div>
         </div>
         

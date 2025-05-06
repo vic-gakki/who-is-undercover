@@ -20,6 +20,16 @@ const genereateSuccessResponse = <T = {[key: string]: any}>(msg: string = 'ok', 
 export class GameService {
   private rooms: Map<string, GameRoom> = new Map();
 
+  getRoomList(){
+    return [...this.rooms.values()].map(room => {
+      return {
+        code: room.code,
+        host: room.players.find(player => player.isHost)?.name,
+        availableNum: room.playerNumber - room.players.length
+      }
+    })
+  }
+
   createRoom(roomCode: string, player: Player, settings: RoomSetting) {
     settings.playerNumber = settings.playerNumber ?? 8
     settings.undercoverNumber = settings.undercoverNumber ?? 1

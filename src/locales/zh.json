@@ -100,5 +100,7 @@
   "prevDesc": "之前的描述",
   "round": "第 {round} 轮",
   "eliminatedHistory": "淘汰历史",
-  "voteHistory": "投票历史"
+  "voteHistory": "投票历史",
+  "playerNum": "玩家人数",
+  "undercoverNum": "卧底人数"
 }

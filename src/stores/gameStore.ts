@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { socket, isConnected, connectionError } from '../services/socketService'
 import socketService from '../services/socketService'
 import { useRouter } from 'vue-router'
-import type {Player, GamePhase, descriptionType, voteType, GameRoom} from '../../server/src/type'
+import type {Player, GamePhase, descriptionType, voteType, GameRoom, Room} from '../../server/src/type'
 import { isNil } from '../util'
 import MessageFn from '../components/Message'
 import {useI18n} from 'vue-i18n'
@@ -39,6 +39,7 @@ export const useGameStore = defineStore('game', () => {
   const roomMode = ref('offline')
   const currentPlayerId = ref('')
   const showVoteModal = ref(false)
+  const roomList = ref<Room[]>([])
 
   // Getters
   const currentPlayer = computed(() => players.value.find(player => player.id === currentPlayerId.value))
@@ -148,7 +149,7 @@ export const useGameStore = defineStore('game', () => {
     }
   }
 
-  function createRoom(playerName: string, password: string, isOnline: boolean) {
+  function createRoom(playerName: string, password: string, isOnline: boolean, playerNumber: number, undercoverNumber: number) {
     if (!socketConnected.value) {
       socketService.connect()
     }
@@ -169,7 +170,9 @@ export const useGameStore = defineStore('game', () => {
       roomCode: newRoomCode,
       settings: {
         password,
-        mode: isOnline ? 'online' : 'offline'
+        mode: isOnline ? 'online' : 'offline',
+        playerNumber,
+        undercoverNumber
       },
       player
     })
@@ -291,6 +294,9 @@ export const useGameStore = defineStore('game', () => {
 
   // Socket listeners
   function initSocketListeners() {
+    socket.on('room-list', (data: Room[]) => {
+      roomList.value = data
+    })
     socket.on('room-joined', (data: { players: Player[], roomCode: string, roomMode: string }) => {
       players.value = data.players
       gamePhase.value = 'waiting'
@@ -380,6 +386,7 @@ export const useGameStore = defineStore('game', () => {
     descriptions,
     isUndercover,
     roomMode,
+    roomList,
     
     // Getters
     isHost,
