@@ -238,11 +238,13 @@ export class GameService {
       }
       const catedVoteIds = Object.keys(roundVotes).filter(voteId => activePlayerIds.includes(voteId))
       const voteDone = catedVoteIds.length === activePlayers.length
+      let eliminatedPlayer: Player
       if(voteDone){
         const votes = this.getVoteResults(roundVotes)
         const maxVoteCount = Math.max(...Object.values(votes))
         const maxVotedPlayers = activePlayers.filter(player => votes[player.id] === maxVoteCount)
         if(maxVotedPlayers.length > 1){
+          room.votes[room.round] = {}
           return genereateSuccessResponse(OperateionMessage.VOTE_CASTED, {
             room,
             tie: maxVotedPlayers.map(player => player.id),
@@ -250,7 +252,8 @@ export class GameService {
             voteDone
           })
         }
-        maxVotedPlayers.forEach(player => player.isEliminated = true)
+        eliminatedPlayer = maxVotedPlayers[0]
+        eliminatedPlayer.isEliminated = true
         const isGameOver = this.isGameOver(roomCode)
         if(isGameOver) {
           return isGameOver
@@ -262,7 +265,8 @@ export class GameService {
       }
       return genereateSuccessResponse(OperateionMessage.VOTE_CASTED, {
         room,
-        voteDone
+        voteDone,
+        playerId: eliminatedPlayer?.id
       }) 
     }
   }

@@ -10,7 +10,7 @@ const {
   activePlayers,
   roundVotes,
   isOfflineRoom,
-  gamePhase
+  voteModalOpen,
 } = storeToRefs(gameStore)
 const emit = defineEmits<{
   (e: 'submitVote', targetId: string): void
@@ -60,25 +60,19 @@ const getVoteCount = (playerId: string) => {
   return voteResults.value[playerId] || 0
 }
 
-const showVoteModal = ref(false)
-
-const voteModalOpen = computed(() => {
-  return !currentPlayer.value?.isEliminated && (isOfflineRoom.value ? showVoteModal.value : gamePhase.value === 'voting')
-})
-
 </script>
 
 <template>
   <div class="flex justify-center" v-if="isOfflineRoom && !currentPlayer?.isEliminated">
     <button
-      @click="showVoteModal = true"
+      @click="gameStore.toggleVoteModal(true)"
       class="btn btn-primary opacity-70"
     >
       <span>{{ $t('op.vote') }}</span>
     </button>
   </div>
         
-  <InfoModal :show="voteModalOpen" :show-confirm="false" :show-close-icon="isOfflineRoom" @close="showVoteModal = false">
+  <InfoModal :show="voteModalOpen" :show-confirm="false" :show-close-icon="isOfflineRoom" @close="gameStore.toggleVoteModal(false)">
     <template #title>
       <p>{{ $t('op.vote') }}</p>
     </template>
@@ -194,7 +188,7 @@ const voteModalOpen = computed(() => {
       <div v-if="isVoteComplete" class="mb-8">
         <h3 class="text-lg font-semibold mb-4">{{ $t('info.voteResults') }}:</h3>
         
-        <div class="space-y-4 flex">
+        <div class="space-y-4 flex flex-col">
           <div 
             v-for="player in activePlayers" 
             :key="player.id"
@@ -224,7 +218,7 @@ const voteModalOpen = computed(() => {
                   ? 'bg-error-500 bg-opacity-10 text-error-500' 
                   : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'"
               >
-                {{ getVoteCount(player.id) }} {{ getVoteCount(player.id) === 1 ? 'vote' : 'votes' }}
+                {{ getVoteCount(player.id) }} {{ $t('info.vote', getVoteCount(player.id) <= 1 ? 1 : 2)}}
               </div>
             </div>
             

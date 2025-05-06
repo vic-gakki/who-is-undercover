@@ -19,7 +19,7 @@ const {
   isOfflineRoom
 } = storeToRefs(gameStore)
 
-const showWordModal = ref(false)
+const showWordModal = ref(true)
 const showLeaveConfirm = ref(false)
 
 const closeWordModal = () => {
@@ -73,16 +73,8 @@ const cancelLeave = () => {
               <div class="text-sm text-gray-500 mb-1">{{ $t('remainPlayer') }}</div>
               <div class="font-bold text-lg">{{ activePlayers.length }} / {{ players.length }}</div>
             </div>
-            
-            <div class="flex items-center space-x-3">
-              <div class="text-sm font-medium px-3 py-1 rounded-full bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300">
-                <span v-if="isUndercover" class="animate-pulse">{{ $t('isUndercover') }}</span>
-                <span v-else>{{ $t('isCivilian') }}</span>
-              </div>
-              
-              <div class="text-sm px-3 py-1 rounded-full bg-secondary-100 text-secondary-700 dark:bg-secondary-900 dark:text-secondary-300">
-                {{ $t('yourWord') }}: {{ word }}
-              </div>
+            <div>
+              <div><span class="text-sm text-gray-500">{{ $t('yourName') }}:</span> <span class="font-bold text-blue-300">{{ currentPlayer?.name }}</span></div>
             </div>
           </div>
         </div>
@@ -121,7 +113,7 @@ const cancelLeave = () => {
             
             <div class="p-4 rounded-lg text-center mb-6" :class="isUndercover ? 'bg-accent-100 text-accent-700 dark:bg-accent-900 dark:text-accent-300' : 'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300'">
               <div class="text-sm font-medium mb-2">
-                <span v-if="isUndercover">{{ $t('isUndercover') }}!</span>
+                <span v-if="isUndercover" class="animate-pulse">{{ $t('isUndercover') }}!</span>
                 <span v-else>{{ $t('isCivilian') }}</span>
               </div>
               <div class="text-2xl font-bold">{{ word }}</div>

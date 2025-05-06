@@ -72,6 +72,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
           break;
         case OperateionMessage.VOTE_CASTED:
           this.server.to(roomCode).emit('vote-cast', {
+            playerId,
             votes: room.votes,
             phase: room.phase,
             round: room.round,

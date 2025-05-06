@@ -6,6 +6,8 @@ import socketService from '../services/socketService'
 import { useRouter } from 'vue-router'
 import type {Player, GamePhase, descriptionType, voteType, GameRoom} from '../../server/src/type'
 import { isNil } from '../util'
+import MessageFn from '../components/Message'
+import {useI18n} from 'vue-i18n'
 interface GameSession {
   roomCode: string
   player: Pick<Player, 'id' | 'name' | 'isHost'>
@@ -19,6 +21,7 @@ const ERROR_TIMEOUT = 1500
 
 export const useGameStore = defineStore('game', () => {
   const router = useRouter()
+  const {t} = useI18n()
   // State
   const roomCode = ref<string>('')
   const players = ref<Player[]>([])
@@ -35,6 +38,7 @@ export const useGameStore = defineStore('game', () => {
   const undercoverWord = ref('')
   const roomMode = ref('offline')
   const currentPlayerId = ref('')
+  const showVoteModal = ref(false)
 
   // Getters
   const currentPlayer = computed(() => players.value.find(player => player.id === currentPlayerId.value))
@@ -53,6 +57,9 @@ export const useGameStore = defineStore('game', () => {
   })
   const socketConnected = computed(() => isConnected.value)
   const socketError = computed(() => connectionError.value)
+  const voteModalOpen = computed(() => {
+    return !currentPlayer.value?.isEliminated && (isOfflineRoom.value ? showVoteModal.value : gamePhase.value === 'voting')
+  })
 
   // Session Management
   function saveSession() {
@@ -275,6 +282,11 @@ export const useGameStore = defineStore('game', () => {
     civilianWord.value = room?.civilianWord ?? ''
     undercoverWord.value = room?.undercoverWord ?? ''
     roomCode.value = room?.code ?? ''
+    showVoteModal.value = false
+  }
+
+  function toggleVoteModal(bool: boolean){
+    showVoteModal.value = bool
   }
 
   // Socket listeners
@@ -311,13 +323,32 @@ export const useGameStore = defineStore('game', () => {
       votes: voteType,
       phase: GamePhase,
       round: number,
-      descriptions: descriptionType
+      descriptions: descriptionType,
+      tie?: string[],
+      maxVotes?: number,
+      playerId?: string
     }) => {
       players.value = data.players
       gamePhase.value = data.phase
       votes.value = data.votes
       descriptions.value = data.descriptions
       round.value = data.round
+      if(data.tie) {
+        const playNames = data.players.filter(player => data.tie?.includes(player.id)).map(player => player.name)
+        return MessageFn.error(t('info.tie', {
+          names: playNames.join(', '),
+          count: data.maxVotes
+        }))
+      }
+      if(data.playerId){
+        if(currentPlayer.value?.id === data.playerId){
+          MessageFn.error(t('info.youAreEliminated'))
+        }else {
+          const name = data.players.find(player => player.id === data.playerId)?.name
+          MessageFn.success(t('info.elimilatedNotice', {name}))
+        }
+        showVoteModal.value = false
+      }
     })
 
     socket.on('game-reset', (room) => {
@@ -359,7 +390,8 @@ export const useGameStore = defineStore('game', () => {
     roundVotes,
     roundDescriptions,
     isOfflineRoom,
-    
+    voteModalOpen,
+
     // Actions
     initializeSocketConnection,
     createRoom,
@@ -368,6 +400,7 @@ export const useGameStore = defineStore('game', () => {
     submitDescription,
     submitVote,
     resetGame,
-    leaveRoom
+    leaveRoom,
+    toggleVoteModal
   }
 })
