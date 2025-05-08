@@ -104,7 +104,7 @@ export class GameService {
       room.players[0].isHost = true;
     }
 
-    if(!leavedPlayer.isEliminated && (room.phase === 'description' || room.phase === 'voting')){
+    if(!leavedPlayer.isEliminated && !leavedPlayer.isWordSetter && (room.phase === 'description' || room.phase === 'voting')){
       return this.updateGameStatus(roomCode, leavedPlayer)
     }
     return genereateSuccessResponse(OperateionMessage.PLAYER_LEFT, {
@@ -126,19 +126,21 @@ export class GameService {
     }
     
     const {civilian, undercover} = this.getWordPair();
-    const players = this.shufflePlayers(room.players)
+    const inGamePlayers = room.players.filter(p => !p.isWordSetter)
+    const players = this.shufflePlayers(inGamePlayers)
     const underCoverIds = players.slice(0, room.undercoverNumber).map(player => player.id)
     room.civilianWord = civilian;
     room.undercoverWord = undercover;
     room.phase = room.mode === 'offline' ? 'voting' : 'description';
-    room.players = room.players.map((player, index) => {
+    const firstId = inGamePlayers[0].id
+    room.players = room.players.map((player) => {
       const isUndercover = underCoverIds.includes(player.id);
       return {
         ...player,
         isUndercover,
         word: isUndercover ? undercover : civilian,
         isEliminated: false,
-        inTurn: index === 0
+        inTurn: player.id === firstId
       }
     });
     return genereateSuccessResponse(OperateionMessage.GAME_STARTED, {room});
@@ -168,7 +170,7 @@ export class GameService {
 
   getActivePlayers(roomCode: string): Player[] {
     const room = this.rooms.get(roomCode);
-    return room.players.filter(player => !player.isEliminated);
+    return room.players.filter(player => !player.isEliminated && !player.isWordSetter);
   }
 
   getVoteResults(votes: Record<string, string>): Record<string, number> {
@@ -184,9 +186,6 @@ export class GameService {
       return generateErrorResponse(ErrorMessage.ROOM_NOT_FOUND);
     }
     const roundVotes = room.votes[room.round] || (room.votes[room.round] = {})
-    if(room.players.find(player => player.id === voterId).isEliminated){
-      return generateErrorResponse(ErrorMessage.YOU_ARE_OUT)
-    }
     roundVotes[voterId] = targetId
     return this.updateGameStatus(roomCode)
   }
@@ -208,7 +207,8 @@ export class GameService {
         isUndercover: undefined,
         word: undefined,
         isEliminated: undefined,
-        inTurn: undefined
+        inTurn: undefined,
+        isWordSetter: false
       }
     });
     return genereateSuccessResponse(OperateionMessage.GAME_RESTARTED, {room})
@@ -303,6 +303,18 @@ export class GameService {
         isUndercover: p.id === playerId ? p.isUndercover : undefined,
         word: p.id === playerId ? p.word : undefined,
       }
+    })
+  }
+  toggleWordSetter(data: {roomCode: string, playerId: string}){
+    const {roomCode, playerId} = data
+    const room = this.rooms.get(roomCode);
+    if (!room) {
+      return generateErrorResponse(ErrorMessage.ROOM_NOT_FOUND);
+    }
+    const setter = room.players.find(player => player.id === playerId)
+    setter.isWordSetter = !setter.isWordSetter
+    return genereateSuccessResponse(OperateionMessage.WORD_SETTER_CHANGED, {
+      room,
     })
   }
 }

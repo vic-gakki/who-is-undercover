@@ -18,4 +18,5 @@ export enum OperateionMessage {
   VOTE_CASTED = 'Vote casted successfully',
   DESCRIPTION_SUBMITTED = 'Description submitted successfully',
   VOTE_TIE = `Vote tied`,
+  WORD_SETTER_CHANGED = 'Word setter has changed'
 }

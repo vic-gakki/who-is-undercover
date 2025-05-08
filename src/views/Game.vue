@@ -13,9 +13,9 @@ const {
   word,
   isUndercover,
   gamePhase,
-  activePlayers,
+  inGamePlayers,
   currentPlayer,
-  players,
+  activePlayers,
   isOfflineRoom
 } = storeToRefs(gameStore)
 
@@ -53,7 +53,7 @@ const cancelLeave = () => {
             <p class="text-gray-500">{{ $t('roomCode') }}: {{ roomCode }}</p>
           </div>
           
-          <div class="mt-4 md:mt-0 flex items-center">
+          <div class="mt-4 md:mt-0 flex items-center" v-if="!currentPlayer?.isWordSetter">
             <button
               class="flex items-center px-3 py-2 rounded-lg border border-primary-500 text-primary-500 hover:bg-primary-500 hover:bg-opacity-10 transition-colors"
               @click="showWordModal = true"
@@ -71,15 +71,15 @@ const cancelLeave = () => {
           <div class="flex flex-col sm:flex-row justify-between items-center">
             <div class="mb-4 sm:mb-0">
               <div class="text-sm text-gray-500 mb-1">{{ $t('remainPlayer') }}</div>
-              <div class="font-bold text-lg">{{ activePlayers.length }} / {{ players.length }}</div>
+              <div class="font-bold text-lg">{{ activePlayers.length }} / {{ inGamePlayers.length }}</div>
             </div>
-            <div>
+            <div v-if="!currentPlayer?.isWordSetter">
               <div><span class="text-sm text-gray-500">{{ $t('yourName') }}:</span> <span class="font-bold text-blue-300">{{ currentPlayer?.name }}</span></div>
             </div>
           </div>
         </div>
 
-        <div v-if="currentPlayer?.isEliminated" class="mb-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
+        <div v-if="currentPlayer?.isEliminated && !currentPlayer?.isWordSetter" class="mb-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-lg">
           <p>{{ $t('info.youAreEliminated') }}</p>
         </div>
 
@@ -93,6 +93,7 @@ const cancelLeave = () => {
         
         <!-- Voting Phase -->
         <VotingPhase
+          v-if="!currentPlayer?.isWordSetter"
           @submit-vote="gameStore.submitVote"
         />
         
@@ -107,7 +108,7 @@ const cancelLeave = () => {
         </div>
         
         <!-- Player's Word Modal -->
-        <div v-if="showWordModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div v-if="showWordModal && !currentPlayer?.isWordSetter" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg max-w-md w-full p-6 animate-slide-up">
             <h2 class="text-2xl font-bold mb-4">{{ $t('yourWord') }}</h2>
             

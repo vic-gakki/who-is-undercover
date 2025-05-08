@@ -40,11 +40,14 @@ defineProps<{
         </div>
         
         <div class="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1">
-          <span v-if="player.isHost" class="flex items-center">
+          <span v-if="player.isHost" class="flex items-center mr-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
             </svg>
             {{ $t('host') }}
+          </span>
+          <span v-if="player.isWordSetter">
+            {{ $t('info.wordSetter') }}
           </span>
           
           <span v-if="player.isEliminated" class="flex items-center ml-2">

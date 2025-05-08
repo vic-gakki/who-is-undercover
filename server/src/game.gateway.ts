@@ -52,6 +52,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const {room} = res.data as {room: GameRoom}
     client.join(payload.roomCode);
     this.server.to(payload.roomCode).emit('room-joined', { players: this.gameService.maskPlayerInfo(room.players), roomCode: room.code });
+    client.emit('room-list', this.gameService.getRoomList())
   }
 
   emitGameStatusUpdate(res){
@@ -98,6 +99,7 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return res
     }
     this.emitGameStatusUpdate(res)
+    client.emit('room-list', this.gameService.getRoomList())
   }
 
   @SubscribeMessage('rejoin-room')
@@ -152,5 +154,14 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const {room} = res.data as {room: GameRoom}
       this.server.to(roomCode).emit('game-reset', room)
     }
+  }
+  @SubscribeMessage('toggle-word-setter')
+  handleToggleWordSetter(client: Socket, data: {roomCode: string, playerId: string}) {
+    const res = this.gameService.toggleWordSetter(data);
+    if(!res.success){
+      return res
+    }
+    const {room} = res.data as {room: GameRoom}
+    this.server.to(data.roomCode).emit('word-setter-changed', this.gameService.maskPlayerInfo(room.players, data.playerId))
   }
 }

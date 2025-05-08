@@ -17,6 +17,7 @@ export interface Player {
   word: string;
   isEliminated: boolean;
   inTurn: boolean;
+  isWordSetter: boolean
 }
 
 export interface GameRoom extends RoomSetting {

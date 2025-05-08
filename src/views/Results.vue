@@ -7,13 +7,13 @@ const gameStore = useGameStore()
 const {
   winner,
   isUndercover,
-  players,
+  inGamePlayers,
   currentPlayer,
   isHost
 } = storeToRefs(gameStore)
 
-const undercoverPlayers = computed(() => players.value.filter(p => p.isUndercover))
-const civilianPlayers = computed(() => players.value.filter(p => !p.isUndercover))
+const undercoverPlayers = computed(() => inGamePlayers.value.filter(p => p.isUndercover))
+const civilianPlayers = computed(() => inGamePlayers.value.filter(p => !p.isUndercover))
 
 const startNewGame = () => {
   gameStore.resetGame()
@@ -41,7 +41,7 @@ const leaveGame = () => {
           </div>
           
           <!-- Personal Result -->
-          <div class="mt-6 text-center">
+          <div class="mt-6 text-center" v-if="!currentPlayer?.isWordSetter">
             <p v-if="isUndercover && winner === 'undercover'" class="text-lg text-accent-500 font-medium">
               {{ $t('info.undercoverWinDesc') }}
             </p>

@@ -10,11 +10,11 @@ const {
   isHost,
   roomCode,
   players,
+  inGamePlayers,
   currentPlayer
 } = storeToRefs(gameStore)
 
 const isClipboardCopied = ref(false)
-const showRules = ref(false)
 
 const copyRoomCode = async () => {
   try {
@@ -49,12 +49,12 @@ const startGame = () => {
   gameStore.startGame()
 }
 
-const toggleRules = () => {
-  showRules.value = !showRules.value
-}
-
 const leaveRoom = () => {
   gameStore.leaveRoom()
+}
+
+const toggleWordSetter = () => {
+  gameStore.toggleWordSetter()
 }
 </script>
 
@@ -84,7 +84,7 @@ const leaveRoom = () => {
         </div>
         
         <div class="mb-8">
-          <h2 class="text-xl font-semibold mb-4">{{ t('players', {count: players.length}) }}</h2>
+          <h2 class="text-xl font-semibold mb-4">{{ t('players', {count: inGamePlayers.length}) }}</h2>
           
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <PlayerCard 
@@ -95,8 +95,8 @@ const leaveRoom = () => {
             />
           </div>
           
-          <div v-if="players.length < 3" class="mt-4 text-center text-warning-500">
-            <p>{{ t('minPlayers', {current: players.length}) }}</p>
+          <div v-if="inGamePlayers.length < 3" class="mt-4 text-center text-warning-500">
+            <p>{{ t('minPlayers', {current: inGamePlayers.length}) }}</p>
           </div>
         </div>
         
@@ -105,8 +105,8 @@ const leaveRoom = () => {
             v-if="isHost" 
             @click="startGame" 
             class="btn btn-primary"
-            :disabled="players.length < 3"
-            :class="{ 'opacity-50 cursor-not-allowed': players.length < 3 }"
+            :disabled="inGamePlayers.length < 3"
+            :class="{ 'opacity-50 cursor-not-allowed': inGamePlayers.length < 3 }"
           >
             {{ t('op.startGame') }}
           </button>
@@ -114,6 +114,11 @@ const leaveRoom = () => {
           <button v-else class="btn btn-outline" disabled>
             {{ t('waitingForHost') }}
           </button>
+
+          <button @click="toggleWordSetter" class="btn btn-primary">
+            {{ t(currentPlayer?.isWordSetter ? 'op.quitSetWord' : 'op.setWord') }}
+          </button>
+
           <button @click="leaveRoom" class="btn btn-outline text-error-500 border-error-500 hover:bg-error-500 hover:bg-opacity-10">
             {{ t('op.leaveRoom') }}
           </button>

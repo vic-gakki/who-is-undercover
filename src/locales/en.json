@@ -35,7 +35,8 @@
     "playAgain": "Play Again",
     "gotIt": "Got It",
     "submitDesc": "Submit Description",
-    "submitVote": "Submit Vote"
+    "submitVote": "Submit Vote",
+    "setWord": "Word Setter"
   },
   "info": {
     "inputName": "Enter your name",
@@ -83,7 +84,9 @@
     "youAreEliminated": "Sorry, you are eliminated.",
     "vote": "vote | votes",
     "tie": "{names} got the same votes: {count}, please vote again!",
-    "elimilatedNotice": "{name} has been eliminated, and the game continues."
+    "elimilatedNotice": "{name} has been eliminated, and the game continues.",
+    "someoneSetWord": "{name} has taken the place",
+    "wordSetter": "Word Setter"
   },
   "justForFun": "Just For Fun",
   "descPhase": "Description Phase",

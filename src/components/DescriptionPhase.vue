@@ -5,7 +5,7 @@ import { storeToRefs } from 'pinia';
 import { isNil } from '../util';
 
 const {
-  players,
+  inGamePlayers,
   round,
   currentPlayer,
   currentTurnPlayer,
@@ -104,7 +104,7 @@ const getRound = (round:number) => {
       <h3 class="text-lg font-semibold mb-4">{{ $t('prevDesc') }}</h3>
       <div v-for="(r, rindex) in (round + 1)" class="space-y-4">
           <p class="font-semibold">{{ $t('round', {round: r}) }}</p>
-          <template v-for="(player, index) in players" :key="player.id">
+          <template v-for="(player, index) in inGamePlayers" :key="player.id">
             <div
               v-if="player.id in getRound(rindex)"
               class="p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 animate-fade-in"

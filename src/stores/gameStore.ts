@@ -44,7 +44,7 @@ export const useGameStore = defineStore('game', () => {
   // Getters
   const currentPlayer = computed(() => players.value.find(player => player.id === currentPlayerId.value))
   const isHost = computed(() => currentPlayer.value?.isHost || false)
-  const activePlayers = computed(() => players.value.filter(p => !p.isEliminated))
+  const activePlayers = computed(() => players.value.filter(p => !p.isEliminated && !p.isWordSetter))
   const currentTurnPlayer = computed(() => players.value.find(player => player.inTurn))
   const roundDescriptions = computed(() => isNil(round.value) ? {} : descriptions.value[round.value] ?? {})
   const roundVotes = computed(() => isNil(round.value) ? {} : votes.value[round.value] ?? {})
@@ -61,6 +61,8 @@ export const useGameStore = defineStore('game', () => {
   const voteModalOpen = computed(() => {
     return !currentPlayer.value?.isEliminated && (isOfflineRoom.value ? showVoteModal.value : gamePhase.value === 'voting')
   })
+
+  const inGamePlayers = computed(() => players.value.filter(player => !player.isWordSetter))
 
   // Session Management
   function saveSession() {
@@ -292,6 +294,18 @@ export const useGameStore = defineStore('game', () => {
     showVoteModal.value = bool
   }
 
+  function toggleWordSetter(){
+    const wordSetter = players.value.find(player => player.isWordSetter)!
+    if(wordSetter && wordSetter !== currentPlayer.value){
+      MessageFn.error(t('info.someoneSetWord', {name: wordSetter.name}))
+      return
+    }
+    socket.emit('toggle-word-setter', {
+      roomCode: roomCode.value,
+      playerId: currentPlayer.value?.id
+    })
+  }
+
   // Socket listeners
   function initSocketListeners() {
     socket.on('room-list', (data: Room[]) => {
@@ -369,6 +383,10 @@ export const useGameStore = defineStore('game', () => {
     socket.on('error', (data: { message: string }) => {
       showError(data.message)
     })
+
+    socket.on('word-setter-changed', (allPlayers: Player[]) => {
+      players.value = allPlayers
+    })
   }
 
   return {
@@ -399,6 +417,7 @@ export const useGameStore = defineStore('game', () => {
     roundDescriptions,
     isOfflineRoom,
     voteModalOpen,
+    inGamePlayers,
 
     // Actions
     initializeSocketConnection,
@@ -409,6 +428,7 @@ export const useGameStore = defineStore('game', () => {
     submitVote,
     resetGame,
     leaveRoom,
-    toggleVoteModal
+    toggleVoteModal,
+    toggleWordSetter
   }
 })
