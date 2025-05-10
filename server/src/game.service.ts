@@ -1,21 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type {Player, GameRoom, RoomSetting, GameServiceResponse} from './type'
+import type {Player, GameRoom, RoomSetting} from './type'
 import { ErrorMessage, OperateionMessage } from './constant';
+import { generateErrorResponse, genereateSuccessResponse } from './utils';
 
-const generateErrorResponse = (errorMessage: string): GameServiceResponse => {
-  return {
-    success: false,
-    msg: errorMessage,
-    data: null
-  }
-}
-const genereateSuccessResponse = <T = {[key: string]: any}>(msg: string = 'ok', data: T): GameServiceResponse<T> => {
-  return {
-    success: true,
-    msg,
-    data
-  }
-}
 @Injectable()
 export class GameService {
   private rooms: Map<string, GameRoom> = new Map();
@@ -124,13 +111,19 @@ export class GameService {
     if (!room) {
       return generateErrorResponse(ErrorMessage.ROOM_NOT_FOUND);
     }
-    
-    const {civilian, undercover} = this.getWordPair();
+    const hasWordSetter = room.players.some(player => player.isWordSetter)
+    if(hasWordSetter && !(room.civilianWord && room.undercoverWord)){
+      return generateErrorResponse(ErrorMessage.SETTING_WORD)
+    }
+    if(!room.civilianWord && !room.undercoverWord){
+      const {civilian, undercover} = this.getWordPair();
+      room.civilianWord = civilian;
+      room.undercoverWord = undercover;
+    }
     const inGamePlayers = room.players.filter(p => !p.isWordSetter)
     const players = this.shufflePlayers(inGamePlayers)
     const underCoverIds = players.slice(0, room.undercoverNumber).map(player => player.id)
-    room.civilianWord = civilian;
-    room.undercoverWord = undercover;
+    
     room.phase = room.mode === 'offline' ? 'voting' : 'description';
     const firstId = inGamePlayers[0].id
     room.players = room.players.map((player) => {
@@ -138,7 +131,7 @@ export class GameService {
       return {
         ...player,
         isUndercover,
-        word: isUndercover ? undercover : civilian,
+        word: isUndercover ? room.undercoverWord : room.civilianWord,
         isEliminated: false,
         inTurn: player.id === firstId
       }
@@ -313,6 +306,22 @@ export class GameService {
     }
     const setter = room.players.find(player => player.id === playerId)
     setter.isWordSetter = !setter.isWordSetter
+    if(!setter.isWordSetter){
+      room.civilianWord = '';
+      room.undercoverWord = '';
+    }
+    return genereateSuccessResponse(OperateionMessage.WORD_SETTER_CHANGED, {
+      room,
+    })
+  }
+  setWord(data: {civilianWord: string, undercoverWord: string, roomCode: string}){
+    const {roomCode, undercoverWord, civilianWord} = data
+    const room = this.rooms.get(roomCode);
+    if (!room) {
+      return generateErrorResponse(ErrorMessage.ROOM_NOT_FOUND);
+    }
+    room.civilianWord = civilianWord;
+    room.undercoverWord = undercoverWord;
     return genereateSuccessResponse(OperateionMessage.WORD_SETTER_CHANGED, {
       room,
     })

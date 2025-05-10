@@ -36,7 +36,8 @@
     "gotIt": "Got It",
     "submitDesc": "Submit Description",
     "submitVote": "Submit Vote",
-    "setWord": "Word Setter"
+    "setWord": "Word Setter",
+    "confirm": "Confirm"
   },
   "info": {
     "inputName": "Enter your name",

@@ -4,7 +4,8 @@ export enum ErrorMessage {
   GAME_ALREADY_STARTED = 'Game already started',
   UNKNOEN_ERROR = 'Unknown error',
   ROOM_FULL = 'Sorry, this room is already full',
-  YOU_ARE_OUT = 'Soory, you are out'
+  YOU_ARE_OUT = 'Soory, you are out',
+  SETTING_WORD = 'Sorry, someone is setting the word'
 }
 
 export enum OperateionMessage {

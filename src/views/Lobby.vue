@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/gameStore'
 import PlayerCard from '../components/PlayerCard.vue'
 import { storeToRefs } from 'pinia'
+import InfoModal from '../components/InfoModal.vue'
 const { t } = useI18n()
 const gameStore = useGameStore()
 const {
@@ -15,6 +16,10 @@ const {
 } = storeToRefs(gameStore)
 
 const isClipboardCopied = ref(false)
+const showWordSetting = ref(false)
+const {civilianWord: cw, undercoverWord: uw} = JSON.parse(localStorage.getItem('game-word') ?? '{}')
+const civilianWord = ref(cw)
+const undercoverWord = ref(uw)
 
 const copyRoomCode = async () => {
   try {
@@ -56,6 +61,20 @@ const leaveRoom = () => {
 const toggleWordSetter = () => {
   gameStore.toggleWordSetter()
 }
+
+const onSetWord = () => {
+  if(!civilianWord.value || !undercoverWord.value) return
+  gameStore.setWord({
+    civilianWord: civilianWord.value,
+    undercoverWord: undercoverWord.value
+  })
+  showWordSetting.value = false
+}
+
+const onRefreshWord = () => {
+  
+}
+
 </script>
 
 <template>
@@ -115,9 +134,13 @@ const toggleWordSetter = () => {
             {{ t('waitingForHost') }}
           </button>
 
-          <button @click="toggleWordSetter" class="btn btn-primary">
-            {{ t(currentPlayer?.isWordSetter ? 'op.quitSetWord' : 'op.setWord') }}
-          </button>
+          <div class="flex gap-4 items-center">
+            <button @click="toggleWordSetter" class="btn btn-primary flex-auto">
+              {{ t(currentPlayer?.isWordSetter ? 'op.quitSetWord' : 'op.setWord') }}
+            </button>
+  
+            <span class="icon-[carbon--settings-edit] text-[28px]" v-if="currentPlayer?.isWordSetter" @click="showWordSetting = true"></span>
+          </div>
 
           <button @click="leaveRoom" class="btn btn-outline text-error-500 border-error-500 hover:bg-error-500 hover:bg-opacity-10">
             {{ t('op.leaveRoom') }}
@@ -125,6 +148,38 @@ const toggleWordSetter = () => {
           
         </div>
       </div>
+      <InfoModal :title="$t('op.setWord')" :show="showWordSetting" @close="showWordSetting = false">
+        <template #body>
+          <div class="p-4">
+            <div class="mb-4 flex items-center gap-4">
+              <label for="civilianWord" class="text-sm font-medium flex-none">{{ $t('civilian') }}</label>
+              <input
+                v-model="civilianWord"
+                type="text"
+                id="civilianWord"
+                class="input"
+              />
+            </div>
+            <div class="mb-4 flex items-center gap-4">
+              <label for="undercoverWord" class="text-sm font-medium flex-none">{{ $t('undercover') }}</label>
+              <input
+                v-model="undercoverWord"
+                type="text"
+                id="undercoverWord"
+                class="input"
+              />
+            </div>
+          </div>
+        </template>
+        <template #footer>
+          <div class="mt-2 flex items-center gap-4 justify-center">
+            <button @click="onSetWord" class="btn btn-primary" :disabled="!civilianWord || !undercoverWord" :class="{ 'opacity-50 cursor-not-allowed': !civilianWord || !undercoverWord }">
+              {{ $t('op.confirm') }}
+            </button>
+            <span class="icon-[ion--refresh] text-[28px] cursor-pointer" @click="onRefreshWord"></span>
+          </div>
+        </template>
+      </InfoModal>
     </div>
   </div>
 </template>

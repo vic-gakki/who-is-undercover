@@ -37,7 +37,8 @@
     "submitDesc": "提交描述",
     "submitVote": "提交投票",
     "setWord": "我要出题",
-    "quitSetWord": "我要游戏"
+    "quitSetWord": "我要游戏",
+    "confirm": "就它啦"
   },
   "info": {
     "inputName": "输入你的名字",

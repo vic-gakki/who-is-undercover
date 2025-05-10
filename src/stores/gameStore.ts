@@ -214,6 +214,11 @@ export const useGameStore = defineStore('game', () => {
     
     socket.emit('start-game', {
       roomCode: roomCode.value
+    }, (res: Record<string ,string>) => {
+      if(!res.success){
+        showError(res.msg)
+        return
+      }
     })
   }
 
@@ -303,6 +308,14 @@ export const useGameStore = defineStore('game', () => {
     socket.emit('toggle-word-setter', {
       roomCode: roomCode.value,
       playerId: currentPlayer.value?.id
+    })
+  }
+
+  function setWord(data: {civilianWord: string, undercoverWord: string}){
+    localStorage.setItem('game-word', JSON.stringify(data))
+    socket.emit('set-word', {
+      ...data,
+      roomCode: roomCode.value
     })
   }
 
@@ -429,6 +442,7 @@ export const useGameStore = defineStore('game', () => {
     resetGame,
     leaveRoom,
     toggleVoteModal,
-    toggleWordSetter
+    toggleWordSetter,
+    setWord
   }
 })
