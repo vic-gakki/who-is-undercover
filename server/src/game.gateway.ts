@@ -171,4 +171,12 @@ export class GameGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return res
     }
   }
+  @SubscribeMessage('refresh-word')
+  handleRefreshWord(client: Socket, category?:string) {
+    const res = this.gameService.refreshWord(category);
+    if(!res.success){
+      return res
+    }
+    return res
+  }
 }

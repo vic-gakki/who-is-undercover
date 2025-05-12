@@ -319,6 +319,15 @@ export const useGameStore = defineStore('game', () => {
     })
   }
 
+  function refreshWord(): Promise<{civilian: string, undercover: string}>{
+    return new Promise((resolve, reject) => {
+      setTimeout(reject, 5000)
+      socket.emit('refresh-word', (res: Record<string, any> ) => {
+        resolve(res.data)
+      })
+    })
+  }
+
   // Socket listeners
   function initSocketListeners() {
     socket.on('room-list', (data: Room[]) => {
@@ -400,6 +409,10 @@ export const useGameStore = defineStore('game', () => {
     socket.on('word-setter-changed', (allPlayers: Player[]) => {
       players.value = allPlayers
     })
+
+    socket.on('word-setter-changed', (allPlayers: Player[]) => {
+      players.value = allPlayers
+    })
   }
 
   return {
@@ -443,6 +456,7 @@ export const useGameStore = defineStore('game', () => {
     leaveRoom,
     toggleVoteModal,
     toggleWordSetter,
-    setWord
+    setWord, 
+    refreshWord
   }
 })

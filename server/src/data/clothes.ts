@@ -1,4 +1,3 @@
-// “校园学习”、“科技数码” 节日文化”、“家居生活
 export default [
   {"civilian": "T恤", "undercover": "卫衣"},
   {"civilian": "牛仔裤", "undercover": "休闲裤"},

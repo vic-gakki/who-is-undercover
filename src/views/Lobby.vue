@@ -72,7 +72,12 @@ const onSetWord = () => {
 }
 
 const onRefreshWord = () => {
-  
+  gameStore.refreshWord().then((data: {civilian: string, undercover: string}) => {
+    civilianWord.value = data.civilian
+    undercoverWord.value = data.undercover
+  }).catch(() => {
+    console.log('get random word error')
+  })
 }
 
 </script>

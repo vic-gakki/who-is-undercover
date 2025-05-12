@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type {Player, GameRoom, RoomSetting} from './type'
 import { ErrorMessage, OperateionMessage } from './constant';
 import { generateErrorResponse, genereateSuccessResponse } from './utils';
+import words from './data'
 
 @Injectable()
 export class GameService {
@@ -106,7 +107,7 @@ export class GameService {
     return players
   }
 
-  startGame(roomCode: string) {
+  startGame(roomCode: string, category?:string) {
     const room = this.rooms.get(roomCode);
     if (!room) {
       return generateErrorResponse(ErrorMessage.ROOM_NOT_FOUND);
@@ -116,7 +117,7 @@ export class GameService {
       return generateErrorResponse(ErrorMessage.SETTING_WORD)
     }
     if(!room.civilianWord && !room.undercoverWord){
-      const {civilian, undercover} = this.getWordPair();
+      const {civilian, undercover} = this.getWordPair(category);
       room.civilianWord = civilian;
       room.undercoverWord = undercover;
     }
@@ -139,15 +140,13 @@ export class GameService {
     return genereateSuccessResponse(OperateionMessage.GAME_STARTED, {room});
   }
 
-  private getWordPair(): { civilian: string; undercover: string } {
-    const wordPairs = [
-      { civilian: 'Beach', undercover: 'Desert' },
-      { civilian: 'Pizza', undercover: 'Burger' },
-      { civilian: 'Cat', undercover: 'Dog' },
-      { civilian: 'Coffee', undercover: 'Tea' },
-      { civilian: 'Summer', undercover: 'Winter' },
-    ];
-    
+  private getWordPair(category?:string): { civilian: string; undercover: string } {
+    let wordPairs
+    if(category){
+      wordPairs = words[category]
+    }else {
+      wordPairs = Object.values(words).flat()
+    }
     return wordPairs[Math.floor(Math.random() * wordPairs.length)];
   }
 
@@ -324,6 +323,13 @@ export class GameService {
     room.undercoverWord = undercoverWord;
     return genereateSuccessResponse(OperateionMessage.WORD_SETTER_CHANGED, {
       room,
+    })
+  }
+  refreshWord(category?:string){
+    const {civilian, undercover} = this.getWordPair(category);
+    return genereateSuccessResponse(OperateionMessage.WORD_SETTER_CHANGED, {
+      civilian,
+      undercover
     })
   }
 }
