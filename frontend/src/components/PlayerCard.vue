@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Player } from '../../../server/src/type'
+import type { Player } from '../../src/type'
 
 defineProps<{
   player: Player
