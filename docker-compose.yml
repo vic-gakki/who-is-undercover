@@ -1,0 +1,17 @@
+version '3.8'
+
+services:
+  frontend:
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: who-is-undercover-fe
+    ports:
+      - "443:5173"
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: who-is-undercover-be
+    ports:
+      - "9488:9488"
