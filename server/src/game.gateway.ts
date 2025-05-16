@@ -11,7 +11,7 @@ import type { GameRoom, Player, RoomSetting } from './type';
 import { OperateionMessage } from './constant';
 @WebSocketGateway({
   cors: {
-    origin: ['http://localhost:5173'],
+    origin: ['https://game.xxvnkexin.dpdns.org'],
     credentials: true,
   },
 })
