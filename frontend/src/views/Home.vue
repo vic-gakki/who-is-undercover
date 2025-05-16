@@ -94,6 +94,14 @@ const joinRoom = async () => {
     isLoading.value = false
   }
 }
+
+const test = () => {
+  fetch(import.meta.env.VITE_API_URL + '/game').then(res => {
+    console.log('fetch success', res)
+  }).catch(err => {
+    console.log('fetch error', err)
+  })
+}
 </script>
 
 <template>
@@ -324,6 +332,12 @@ const joinRoom = async () => {
             </div>
           </div>
         </div>
+        <button 
+          @click="test" 
+          class="btn btn-secondary"
+        >
+          测试http
+        </button>
         
         <div class="mt-8 text-center text-sm text-gray-500">
           <p>{{ $t('info.desc') }}</p>
