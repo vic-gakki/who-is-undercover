@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
     container_name: who-is-undercover-fe
     ports:
-      - "5173:5173"
+      - "5173:80"
   backend:
     build:
       context: ./server
