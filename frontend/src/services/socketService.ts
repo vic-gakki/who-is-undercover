@@ -3,7 +3,7 @@ import { ref } from 'vue'
 
 // This URL would point to your NestJS server in production
 // For local development, this would be your local NestJS server
-const API_URL = import.meta.env.VITE_API_URL || 'http://192.168.101.2:3000'
+const API_URL = import.meta.env.VITE_API_URL
 
 // Use a ref to track connection status
 const isConnected = ref(false)

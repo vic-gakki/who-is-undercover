@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '../stores/gameStore'
-import type { Room } from '../../server/src/type'
+import type { Room } from '../../../server/src/type'
 
 const router = useRouter()
 const gameStore = useGameStore()

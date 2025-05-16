@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
-    "server": "cd server && npm run start:dev",
+    "server": "cd ../server && npm run start:dev",
     "dev:all": "concurrently \"npm run dev\" \"npm run server\""
   },
   "dependencies": {

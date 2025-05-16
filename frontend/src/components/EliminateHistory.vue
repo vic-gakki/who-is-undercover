@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useGameStore } from '../stores/gameStore';
-import { Player } from '../../server/src/type';
+import { Player } from '../../../server/src/type';
 import BaseCollapse from './BaseCollapse.vue';
 import { storeToRefs } from 'pinia';
 const leftPlayerInfo = {name: 'left player'}

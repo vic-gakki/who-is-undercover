@@ -8,10 +8,10 @@ import {
 import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
 import type { GameRoom, Player, RoomSetting } from './type';
-import { ErrorMessage, OperateionMessage } from './constant';
+import { OperateionMessage } from './constant';
 @WebSocketGateway({
   cors: {
-    origin: ['http://localhost:5173', 'http://192.168.101.2:5173'],
+    origin: ['http://localhost:5173'],
     credentials: true,
   },
 })

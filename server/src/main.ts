@@ -4,13 +4,13 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     cors: {
-      origin: ['http://localhost:5173', 'http://192.168.101.2:5173'], // Allow Vue dev server
+      origin: '*', // Allow Vue dev server
       methods: ['GET', 'POST'],
       credentials: true,
     },
   });
-  
-  await app.listen(3000);
-  console.log('Server running on http://localhost:3000');
+  // 9488 mean who is the undercover
+  await app.listen(9488);
+  console.log('Server running on http://localhost:9488');
 }
 bootstrap();
