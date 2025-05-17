@@ -88,11 +88,12 @@ export default {
   // Create a new socket instance (useful for reconnecting with new options)
   resetConnection(options = {}) {
     this.disconnect()
-    socket = io(API_URL, {
+    socket = io(WS_URL, {
       autoConnect: false,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      path: `${prefixPath}/socket.io`,
       ...options
     })
     setupSocketListeners()
