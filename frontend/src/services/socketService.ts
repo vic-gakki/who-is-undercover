@@ -17,6 +17,7 @@ let socket: Socket = io(API_URL, {
   reconnectionDelay: 1000,
   // transports: ['websocket', 'polling'],
   withCredentials: true,
+  path: 'api'
 })
 
 // Setup event listeners
