@@ -5,6 +5,7 @@ import { ref } from 'vue'
 // For local development, this would be your local NestJS server
 const WS_URL = import.meta.env.VITE_HOST
 const prefix = import.meta.env.VITE_API_PREFIX
+const path = `${prefix}/socket.io`
 // Use a ref to track connection status
 const isConnected = ref(false)
 const connectionError = ref<string | null>(null)
@@ -17,7 +18,7 @@ let socket: Socket = io(WS_URL, {
   reconnectionDelay: 1000,
   // transports: ['websocket', 'polling'],
   withCredentials: true,
-  path: prefix
+  path
 })
 
 // Setup event listeners
@@ -93,7 +94,7 @@ export default {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      path: prefix,
+      path,
       ...options
     })
     setupSocketListeners()
